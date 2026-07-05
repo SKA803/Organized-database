@@ -1,0 +1,1691 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظام إدارة الموظفين</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary-color: #4361ee;
+      --secondary-color: #3f37c9;
+      --accent-color: #4895ef;
+      --light-color: #f8f9fa;
+      --dark-color: #212529;
+      --success-color: #28a745;
+      --danger-color: #dc3545;
+      --warning-color: #ff9800;
+      --border-radius: 12px;
+      --box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+      --transition: all 0.3s ease;
+    }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'Tajawal', Arial, sans-serif;
+      background: #f0f2f5;
+      color: var(--dark-color);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1100px;
+      margin: 15px auto;
+      background: white;
+      padding: 20px 25px;
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    }
+    
+    h1 {
+      color: var(--primary-color);
+      text-align: center;
+      font-size: 1.6rem;
+      margin-bottom: 20px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid rgba(67, 97, 238, 0.15);
+    }
+    
+    h1 i { margin-left: 8px; }
+    
+    .btn {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-weight: 500;
+      font-size: 0.85rem;
+      border: none;
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .btn i { font-size: 0.9rem; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .btn-primary { background: var(--primary-color); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--secondary-color); }
+    
+    .btn-success { background: var(--success-color); color: #fff; }
+    .btn-success:hover:not(:disabled) { background: #218838; }
+    
+    .btn-danger { background: var(--danger-color); color: #fff; }
+    .btn-danger:hover:not(:disabled) { background: #c82333; }
+    
+    .btn-warning { background: var(--warning-color); color: #fff; }
+    .btn-warning:hover:not(:disabled) { background: #e68900; }
+    
+    .btn-secondary { background: #6c757d; color: #fff; }
+    .btn-secondary:hover:not(:disabled) { background: #5a6268; }
+    
+    .btn-sm { padding: 3px 10px; font-size: 0.75rem; }
+    .btn-block { width: 100%; justify-content: center; padding: 10px; }
+    
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-weight: 600; font-size: 0.85rem; color: #555; margin-bottom: 3px; }
+    
+    input, select, textarea {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #dce1e8;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      transition: var(--transition);
+      background: #fafbfc;
+    }
+    
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+      background: #fff;
+    }
+    
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    
+    .section-title {
+      font-size: 1rem;
+      color: #2c3e50;
+      margin-bottom: 12px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid var(--primary-color);
+    }
+    
+    .section-title i { margin-left: 6px; }
+    
+    .employee-list { margin-top: 15px; }
+    
+    .employee-card {
+      background: #fff;
+      border: 1px solid #e8ecf1;
+      border-radius: 10px;
+      padding: 10px 15px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: var(--transition);
+    }
+    
+    .employee-card:hover { border-color: var(--primary-color); }
+    
+    .employee-name { font-weight: 600; font-size: 0.95rem; }
+    .employee-name i { margin-left: 8px; color: var(--primary-color); }
+    
+    .employee-actions { display: flex; gap: 5px; }
+    
+    .empty-state { text-align: center; padding: 30px 20px; color: #999; }
+    .empty-state i { font-size: 2.5rem; color: #ddd; margin-bottom: 10px; }
+    
+    .add-btn {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 15px;
+      font-weight: 600;
+      transition: var(--transition);
+      box-shadow: 0 4px 12px rgba(67, 97, 238, 0.25);
+    }
+    
+    .add-btn:hover { transform: translateY(-2px); }
+    .add-btn i { margin-left: 8px; }
+    
+    /* ===== تسجيل الدخول ===== */
+    .login-box {
+      max-width: 400px;
+      margin: 50px auto;
+      background: white;
+      padding: 30px;
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+      text-align: center;
+    }
+    
+    .login-box .logo {
+      font-size: 3rem;
+      color: var(--primary-color);
+      margin-bottom: 15px;
+    }
+    
+    .login-box h2 {
+      margin-bottom: 20px;
+      color: var(--dark-color);
+    }
+    
+    .login-box .form-group {
+      text-align: right;
+    }
+    
+    .login-box .btn-block {
+      margin-top: 10px;
+    }
+    
+    .login-box .footer-text {
+      margin-top: 15px;
+      font-size: 0.85rem;
+      color: #888;
+      border-top: 1px solid #eee;
+      padding-top: 12px;
+    }
+    
+    .login-box .footer-text i {
+      color: var(--primary-color);
+    }
+    
+    /* ===== العهدة ===== */
+    .cash-box {
+      background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 15px;
+      border: 1px solid #e8ecf1;
+    }
+    
+    .cash-box .balance {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: var(--primary-color);
+      text-align: center;
+    }
+    
+    .cash-box .balance.negative { color: var(--danger-color); }
+    
+    .cash-transactions {
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 10px;
+    }
+    
+    .cash-transactions .item {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 8px;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 0.85rem;
+    }
+    
+    .cash-transactions .item:last-child { border-bottom: none; }
+    .cash-transactions .item .out { color: var(--danger-color); }
+    .cash-transactions .item .in { color: var(--success-color); }
+    
+    .footer {
+      text-align: center;
+      margin-top: 25px;
+      padding-top: 12px;
+      border-top: 1px solid #e8ecf1;
+      color: #999;
+      font-size: 0.8rem;
+    }
+    
+    .footer a { color: var(--primary-color); text-decoration: none; }
+    
+    .loading {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 9999;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      color: #fff;
+    }
+    
+    .loading.active { display: flex; }
+    
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(255,255,255,0.3);
+      border-top: 4px solid #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 12px;
+    }
+    
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    /* ===== ستايلات الجدول ===== */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    
+    th, td {
+      border: 1px solid #e8ecf1;
+      padding: 6px 8px;
+      text-align: center;
+    }
+    
+    th { background: #2c3e50; color: #fff; font-weight: 600; font-size: 0.8rem; }
+    tr:nth-child(even) { background: #fafbfc; }
+    tr:hover { background: #f0f4ff; }
+    
+    .no-data { text-align: center; padding: 15px; color: #999; }
+    
+    .table-actions { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+    
+    .export-btn {
+      background: #28a745;
+      color: #fff;
+      border: none;
+      padding: 6px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 0.85rem;
+      transition: var(--transition);
+    }
+    
+    .export-btn:hover { background: #218838; }
+    
+    /* ===== نافذة منبثقة ===== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 9998;
+      display: none;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .modal-overlay.active { display: flex; }
+    
+    .modal-box {
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      max-width: 400px;
+      text-align: center;
+      animation: slideUp 0.3s ease;
+    }
+    
+    .modal-box .emoji { font-size: 4rem; margin-bottom: 10px; }
+    .modal-box h3 { color: var(--danger-color); margin-bottom: 10px; }
+    .modal-box p { color: #666; margin-bottom: 15px; }
+    
+    @keyframes slideUp {
+      from { transform: translateY(30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    
+    .toast {
+      position: fixed;
+      top: 15px;
+      right: 50%;
+      transform: translateX(50%);
+      padding: 10px 22px;
+      border-radius: 8px;
+      z-index: 10000;
+      font-weight: 600;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+      animation: fadeIn 0.3s;
+    }
+    
+    .toast.success { background: var(--success-color); color: #fff; }
+    .toast.error { background: var(--danger-color); color: #fff; }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateX(50%) translateY(-20px); }
+      to { opacity: 1; transform: translateX(50%) translateY(0); }
+    }
+    
+    /* ===== علامات التبويب ===== */
+    .tabs {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 15px;
+      border-bottom: 2px solid #e8ecf1;
+      padding-bottom: 5px;
+      flex-wrap: wrap;
+    }
+    
+    .tabs .tab {
+      padding: 8px 18px;
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      transition: var(--transition);
+      font-weight: 500;
+      color: #888;
+      border: none;
+      background: transparent;
+    }
+    
+    .tabs .tab:hover { background: #f0f2f5; }
+    .tabs .tab.active { background: var(--primary-color); color: #fff; }
+    
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    @media (max-width: 768px) {
+      .container { padding: 12px 15px; margin: 8px; }
+      .row-2, .row-3 { grid-template-columns: 1fr; }
+      table { font-size: 0.75rem; }
+      th, td { padding: 4px; }
+      .tabs { flex-wrap: wrap; }
+      .employee-card { flex-direction: column; align-items: flex-start; }
+      .employee-actions { margin-top: 6px; align-self: flex-end; }
+    }
+    
+    @media (max-width: 480px) {
+      .container { padding: 8px 10px; }
+      .login-box { margin: 20px 10px; padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <span id="loadingText">جاري التحميل...</span>
+  </div>
+
+  <div class="modal-overlay" id="restrictedModal">
+    <div class="modal-box">
+      <div class="emoji">😅</div>
+      <h3>بطل لعب يا بابا!</h3>
+      <p>أنت هنا للعرض فقط، ليس لديك صلاحيات للتعديل أو الإضافة.</p>
+      <button class="btn btn-primary" onclick="closeModal()">فهمت 🫡</button>
+    </div>
+  </div>
+
+  <script>
+    // =============================================
+    // نظام الصلاحيات مع حفظ الجلسة
+    // =============================================
+    const AUTH = {
+      PASSWORDS: {
+        admin: 'SK_A803',
+        viewer: 'Abu_Ghazal'
+      },
+      role: null,
+      
+      login(password) {
+        if (password === this.PASSWORDS.admin) {
+          this.role = 'admin';
+          return 'admin';
+        } else if (password === this.PASSWORDS.viewer) {
+          this.role = 'viewer';
+          return 'viewer';
+        }
+        return null;
+      },
+      
+      logout() {
+        this.role = null;
+        sessionStorage.removeItem('userRole');
+        sessionStorage.removeItem('currentPage');
+        sessionStorage.removeItem('pageHistory');
+      },
+      
+      isAdmin() { return this.role === 'admin'; },
+      isViewer() { return this.role === 'viewer'; },
+      isLoggedIn() { return this.role !== null; },
+      
+      check(showModal = true) {
+        if (!this.isLoggedIn()) {
+          this.showLogin();
+          return false;
+        }
+        if (this.isViewer()) {
+          if (showModal) {
+            document.getElementById('restrictedModal').classList.add('active');
+          }
+          return false;
+        }
+        return true;
+      },
+      
+      showLogin() {
+        loadLoginPage();
+      },
+      
+      saveSession() {
+        if (this.role) {
+          sessionStorage.setItem('userRole', this.role);
+        }
+      },
+      
+      loadSession() {
+        const role = sessionStorage.getItem('userRole');
+        if (role === 'admin' || role === 'viewer') {
+          this.role = role;
+          return true;
+        }
+        return false;
+      }
+    };
+
+    function closeModal() {
+      document.getElementById('restrictedModal').classList.remove('active');
+    }
+
+    // =============================================
+    // نظام التنقل وحفظ التاريخ
+    // =============================================
+    const Navigation = {
+      history: [],
+      currentPage: 'home',
+      currentId: null,
+      
+      init() {
+        // تحميل التاريخ من sessionStorage
+        try {
+          const saved = sessionStorage.getItem('pageHistory');
+          if (saved) {
+            this.history = JSON.parse(saved);
+          }
+          const page = sessionStorage.getItem('currentPage');
+          if (page) {
+            this.currentPage = page;
+          }
+        } catch(e) {
+          this.history = [];
+        }
+      },
+      
+      push(page, id = null) {
+        // لا نضيف الصفحة الحالية مرتين
+        if (this.history.length > 0 && this.history[this.history.length - 1].page === page && 
+            this.history[this.history.length - 1].id === id) {
+          return;
+        }
+        this.history.push({ page, id });
+        this.currentPage = page;
+        this.currentId = id;
+        this.save();
+      },
+      
+      back() {
+        if (this.history.length > 1) {
+          // نزيل الصفحة الحالية
+          this.history.pop();
+          const prev = this.history[this.history.length - 1];
+          this.currentPage = prev.page;
+          this.currentId = prev.id;
+          this.save();
+          loadPage(this.currentPage, this.currentId);
+          return true;
+        }
+        return false; // لا يوجد صفحات سابقة
+      },
+      
+      save() {
+        try {
+          sessionStorage.setItem('pageHistory', JSON.stringify(this.history));
+          sessionStorage.setItem('currentPage', this.currentPage);
+        } catch(e) {}
+      },
+      
+      clear() {
+        this.history = [];
+        this.currentPage = 'home';
+        this.currentId = null;
+        sessionStorage.removeItem('pageHistory');
+        sessionStorage.removeItem('currentPage');
+      }
+    };
+
+    // =============================================
+    // تكوين قاعدة البيانات
+    // =============================================
+    const DB_CONFIG = {
+      url: 'https://xgjzmtlhlqguemfpdfez.supabase.co/rest/v1',
+      apiKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnanptdGxobHFndWVtZnBkZmV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MTM2NjUsImV4cCI6MjA5ODQ4OTY2NX0.zLEmpcJuO_I5KF4KNyns__2hITB_kMWIOIUWzGcwVgM',
+      headers: {
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnanptdGxobHFndWVtZnBkZmV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MTM2NjUsImV4cCI6MjA5ODQ4OTY2NX0.zLEmpcJuO_I5KF4KNyns__2hITB_kMWIOIUWzGcwVgM',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhnanptdGxobHFndWVtZnBkZmV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MTM2NjUsImV4cCI6MjA5ODQ4OTY2NX0.zLEmpcJuO_I5KF4KNyns__2hITB_kMWIOIUWzGcwVgM',
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      }
+    };
+
+    // =============================================
+    // دوال الاتصال بقاعدة البيانات (محسنة)
+    // =============================================
+    const cache = {};
+
+    async function dbFetch(endpoint, options = {}) {
+      const url = `${DB_CONFIG.url}/${endpoint}`;
+      const headers = { ...DB_CONFIG.headers, ...options.headers };
+      
+      // التحقق من الكاش للطلبات GET
+      const cacheKey = `${endpoint}_${JSON.stringify(options)}`;
+      if (options.method === 'GET' && cache[cacheKey]) {
+        const cached = cache[cacheKey];
+        if (Date.now() - cached.time < 30000) { // 30 ثانية
+          return cached.data;
+        }
+      }
+      
+      try {
+        const response = await fetch(url, { ...options, headers });
+        if (!response.ok) {
+          const error = await response.text();
+          throw new Error(`خطأ في قاعدة البيانات: ${response.status} - ${error}`);
+        }
+        const data = await response.json();
+        
+        // تخزين في الكاش
+        if (options.method === 'GET') {
+          cache[cacheKey] = { data, time: Date.now() };
+        }
+        
+        return data;
+      } catch (error) {
+        console.error('Error in dbFetch:', error);
+        throw error;
+      }
+    }
+
+    // =============================================
+    // دوال CRUD
+    // =============================================
+    const db = {
+      employees: {
+        getAll: () => dbFetch('employees?select=*'),
+        create: (data) => dbFetch('employees', { method: 'POST', body: JSON.stringify(data) }),
+        update: (id, data) => dbFetch(`employees?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+        delete: (id) => dbFetch(`employees?id=eq.${id}`, { method: 'DELETE' })
+      },
+      workRecords: {
+        getByEmployee: (id) => dbFetch(`work_records?employee_id=eq.${id}&order=date.asc`),
+        create: (data) => dbFetch('work_records', { method: 'POST', body: JSON.stringify(data) }),
+        update: (id, data) => dbFetch(`work_records?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+        delete: (id) => dbFetch(`work_records?id=eq.${id}`, { method: 'DELETE' })
+      },
+      withdrawals: {
+        getByEmployee: (id) => dbFetch(`withdrawals?employee_id=eq.${id}&order=date.desc`),
+        create: (data) => dbFetch('withdrawals', { method: 'POST', body: JSON.stringify(data) }),
+        delete: (id) => dbFetch(`withdrawals?id=eq.${id}`, { method: 'DELETE' })
+      },
+      penalties: {
+        getByEmployee: async (id) => {
+          try { return await dbFetch(`penalties?employee_id=eq.${id}&order=date.desc`); } 
+          catch(e) { return []; }
+        },
+        create: async (data) => {
+          try { return await dbFetch('penalties', { method: 'POST', body: JSON.stringify(data) }); } 
+          catch(e) { return []; }
+        },
+        delete: async (id) => {
+          try { return await dbFetch(`penalties?id=eq.${id}`, { method: 'DELETE' }); } 
+          catch(e) { return []; }
+        }
+      },
+      cash: {
+        getAll: () => dbFetch('cash_accounts?order=date.desc'),
+        create: (data) => dbFetch('cash_accounts', { method: 'POST', body: JSON.stringify(data) }),
+        delete: (id) => dbFetch(`cash_accounts?id=eq.${id}`, { method: 'DELETE' })
+      },
+      monthlyArchives: {
+        getByEmployee: (id) => dbFetch(`monthly_archives?employee_id=eq.${id}&order=month.desc`),
+        upsert: (data) => dbFetch('monthly_archives', { method: 'POST', body: JSON.stringify(data), headers: { ...DB_CONFIG.headers, 'Prefer': 'return=representation,resolution=merge-duplicates' } })
+      }
+    };
+
+    // =============================================
+    // حساب الإحصائيات
+    // =============================================
+    function calculateStats(records, withdrawals, penalties, emp) {
+      const dailyHours = emp?.dailyhours || 8;
+      const overtimeRate = emp?.overtimerate || 0;
+      const salary = emp?.salary || 0;
+      const dailyRate = salary / 30;
+
+      let workDays = 0, workDaysSalary = 0;
+      let vacationDays = 0, vacationSalary = 0;
+      let unpaidDays = 0;
+      let overtimeHours = 0, overtimeSalary = 0;
+      let totalAllowance = 0, totalTransport = 0;
+
+      records.forEach(r => {
+        if (r.type === 'vacation') {
+          vacationDays++;
+          vacationSalary += dailyRate;
+          return;
+        }
+        if (r.type === 'unpaid') {
+          unpaidDays++;
+          return;
+        }
+        workDays++;
+        workDaysSalary += dailyRate;
+        totalTransport += (parseFloat(r.morningtransport)||0) + (parseFloat(r.eveningtransport)||0);
+        totalAllowance += parseFloat(r.allowance)||0;
+        if (r.starttime && r.endtime) {
+          try {
+            const start = new Date(`1970-01-01T${r.starttime}`);
+            const end = new Date(`1970-01-01T${r.endtime}`);
+            const hours = (end - start) / (1000 * 60 * 60);
+            if (hours > dailyHours) {
+              const extra = hours - dailyHours;
+              overtimeHours += extra;
+              overtimeSalary += extra * overtimeRate;
+            }
+          } catch(e) {}
+        }
+      });
+
+      const totalEarnings = workDaysSalary + vacationSalary + overtimeSalary + totalAllowance + totalTransport;
+      const absentDeduction = unpaidDays * dailyRate;
+      
+      let totalWithdrawals = 0;
+      withdrawals.forEach(w => totalWithdrawals += parseFloat(w.amount)||0);
+      
+      let totalPenalties = 0;
+      if (penalties) penalties.forEach(p => totalPenalties += parseFloat(p.amount)||0);
+      
+      const totalDeductions = absentDeduction + totalWithdrawals + totalPenalties;
+      const balance = totalEarnings - totalDeductions;
+
+      return {
+        workDays, vacationDays, unpaidDays,
+        vacationSalary, absentDeduction,
+        workDaysSalary, overtimeHours, overtimeSalary,
+        totalAllowance, totalTransport,
+        totalEarnings, totalWithdrawals, totalPenalties,
+        totalDeductions, balance
+      };
+    }
+
+    // =============================================
+    // متغيرات التطبيق
+    // =============================================
+    const appState = {
+      employees: [], workRecords: [], withdrawals: [], penalties: [], cash: [],
+      stats: null, currentEmployeeId: null
+    };
+
+    function showLoading(show, msg = 'جاري التحميل...') {
+      const el = document.getElementById('loading');
+      const txt = document.getElementById('loadingText');
+      if (show) { txt.textContent = msg; el.classList.add('active'); } 
+      else { el.classList.remove('active'); }
+    }
+
+    function showToast(msg, type = 'success') {
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      el.textContent = msg;
+      document.body.appendChild(el);
+      setTimeout(() => { if (document.body.contains(el)) document.body.removeChild(el); }, 3000);
+    }
+
+    async function loadEmployees() {
+      try { 
+        showLoading(true, 'جاري تحميل الموظفين...'); 
+        appState.employees = await db.employees.getAll(); 
+        showLoading(false); 
+        return appState.employees; 
+      } catch(e) { 
+        showLoading(false); 
+        showToast('فشل تحميل الموظفين', 'error'); 
+        return []; 
+      }
+    }
+
+    async function loadEmployeeData(id) {
+      try {
+        showLoading(true, 'جاري تحميل البيانات...');
+        let r=[], w=[], p=[];
+        try { r = await db.workRecords.getByEmployee(id); } catch(e) {}
+        try { w = await db.withdrawals.getByEmployee(id); } catch(e) {}
+        try { p = await db.penalties.getByEmployee(id); } catch(e) {}
+        appState.workRecords = r||[]; appState.withdrawals = w||[]; appState.penalties = p||[];
+        const emp = appState.employees.find(e => e.id === id);
+        appState.stats = emp ? calculateStats(appState.workRecords, appState.withdrawals, appState.penalties, emp) : null;
+        showLoading(false);
+        return appState.stats;
+      } catch(e) { 
+        showLoading(false); 
+        showToast('فشل تحميل البيانات', 'error'); 
+        return null; 
+      }
+    }
+
+    async function loadCash() {
+      try {
+        const data = await db.cash.getAll();
+        appState.cash = data || [];
+        return appState.cash;
+      } catch(e) {
+        console.warn('فشل تحميل العهدة:', e);
+        appState.cash = [];
+        return [];
+      }
+    }
+
+    // =============================================
+    // صفحة تسجيل الدخول
+    // =============================================
+    function loadLoginPage() {
+      const app = document.getElementById('app');
+      app.innerHTML = `
+        <div class="login-box">
+          <div class="logo"><i class="fas fa-users-cog"></i></div>
+          <h2>تسجيل الدخول</h2>
+          <form id="loginForm">
+            <div class="form-group">
+              <label>كلمة المرور</label>
+              <input type="password" id="loginPassword" placeholder="أدخل كلمة المرور" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block"><i class="fas fa-sign-in-alt"></i> دخول</button>
+          </form>
+          <div class="footer-text">
+            <i class="fas fa-code"></i> تم تطوير الموقع من قبل المبرمج عبد الله ندا
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('loginForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const password = document.getElementById('loginPassword').value;
+        const role = AUTH.login(password);
+        if (role === 'admin' || role === 'viewer') {
+          AUTH.saveSession();
+          Navigation.clear();
+          Navigation.push('home');
+          showToast(role === 'admin' ? 'مرحباً أيها المدير 🫡' : 'مرحباً أيها المشاهد 👀', 'success');
+          loadHomePage();
+        } else {
+          showToast('كلمة مرور خاطئة ❌', 'error');
+        }
+      });
+    }
+
+    // =============================================
+    // الصفحات
+    // =============================================
+    function loadPage(page, id = null) {
+      if (!AUTH.isLoggedIn()) {
+        loadLoginPage();
+        return;
+      }
+      
+      // حفظ الصفحة في التاريخ
+      Navigation.push(page, id);
+      
+      appState.currentEmployeeId = id;
+      switch(page) {
+        case 'home': loadHomePage(); break;
+        case 'add': loadAddEdit(); break;
+        case 'edit': loadAddEdit(id); break;
+        case 'employee': loadEmployeePage(id); break;
+        case 'archive': loadArchivePage(id); break;
+        case 'multi': loadMultiSelect(); break;
+        case 'cash': loadCashPage(); break;
+        default: loadHomePage();
+      }
+    }
+
+    // =============================================
+    // الصفحة الرئيسية
+    // =============================================
+    async function loadHomePage() {
+      const app = document.getElementById('app');
+      await loadEmployees();
+      const isAdmin = AUTH.isAdmin();
+      
+      app.innerHTML = `
+        <div class="container">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+            <h1 style="margin:0;border:none;padding:0;"><i class="fas fa-users-cog"></i> إدارة الموظفين</h1>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <span style="font-size:0.8rem;color:#888;">${isAdmin ? '👑 مدير' : '👀 مشاهد'}</span>
+              <button class="btn btn-danger btn-sm" onclick="logoutUser()"><i class="fas fa-sign-out-alt"></i> خروج</button>
+            </div>
+          </div>
+          
+          <div style="display:flex;gap:10px;margin:15px 0;flex-wrap:wrap;">
+            <button class="btn btn-primary" onclick="loadPage('add')" ${!isAdmin ? 'disabled' : ''}><i class="fas fa-user-plus"></i> إضافة موظف</button>
+            <button class="btn btn-success" onclick="loadPage('multi')" ${!isAdmin ? 'disabled' : ''}><i class="fas fa-users"></i> إضافة جماعية</button>
+            <button class="btn btn-warning" onclick="loadPage('cash')"><i class="fas fa-wallet"></i> العهدة</button>
+            ${!isAdmin ? `<button class="btn btn-secondary btn-sm" disabled><i class="fas fa-lock"></i> غير مسموح</button>` : ''}
+          </div>
+          
+          <div class="employee-list">
+            ${appState.employees.length === 0 ? 
+              '<div class="empty-state"><i class="far fa-folder-open"></i><p>لا يوجد موظفين</p></div>' :
+              appState.employees.map(e => `
+                <div class="employee-card">
+                  <div class="employee-name"><i class="fas fa-user-tie"></i> ${e.name}</div>
+                  <div class="employee-actions">
+                    <button class="btn btn-primary btn-sm" onclick="loadPage('employee','${e.id}')"><i class="fas fa-eye"></i></button>
+                    ${isAdmin ? `
+                      <button class="btn btn-warning btn-sm" onclick="loadPage('edit','${e.id}')"><i class="fas fa-edit"></i></button>
+                      <button class="btn btn-danger btn-sm" onclick="deleteEmp('${e.id}')"><i class="fas fa-trash"></i></button>
+                    ` : `
+                      <button class="btn btn-secondary btn-sm" disabled><i class="fas fa-lock"></i></button>
+                    `}
+                  </div>
+                </div>
+              `).join('')
+            }
+          </div>
+          
+          <div class="footer">
+            <i class="fas fa-code"></i> تم تطوير الموقع من قبل المبرمج عبد الله ندا
+          </div>
+        </div>
+      `;
+    }
+
+    function logoutUser() {
+      AUTH.logout();
+      Navigation.clear();
+      loadLoginPage();
+      showToast('تم تسجيل الخروج 👋', 'success');
+    }
+
+    async function deleteEmp(id) {
+      if (!AUTH.isAdmin()) { showRestrictedModal(); return; }
+      if (!confirm('تأكيد حذف الموظف؟')) return;
+      try { 
+        showLoading(true, 'جاري الحذف...'); 
+        await db.employees.delete(id); 
+        await loadEmployees(); 
+        showLoading(false); 
+        loadHomePage(); 
+        showToast('تم الحذف', 'success'); 
+      } catch(e) { 
+        showLoading(false); 
+        showToast('فشل الحذف', 'error'); 
+      }
+    }
+
+    function showRestrictedModal() {
+      document.getElementById('restrictedModal').classList.add('active');
+    }
+
+    // =============================================
+    // إضافة / تعديل موظف
+    // =============================================
+    function loadAddEdit(id = null) {
+      if (!AUTH.isAdmin()) { showRestrictedModal(); return; }
+      const isEdit = id !== null;
+      const emp = isEdit ? appState.employees.find(e => e.id === id) : null;
+      const app = document.getElementById('app');
+      app.innerHTML = `
+        <div class="container">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+            <h1 style="margin:0;border:none;padding:0;"><i class="fas fa-user-${isEdit ? 'edit' : 'plus'}"></i> ${isEdit ? 'تعديل موظف' : 'إضافة موظف'}</h1>
+            <button class="btn btn-secondary btn-sm" onclick="goBack()"><i class="fas fa-arrow-right"></i> رجوع</button>
+          </div>
+          
+          <form id="empForm" style="margin-top:15px;">
+            <div class="form-group"><label>الاسم</label><input type="text" id="fName" required value="${emp?.name||''}"></div>
+            <div class="form-group"><label>الوظيفة</label><input type="text" id="fPosition" value="${emp?.position||''}"></div>
+            <div class="row-2">
+              <div class="form-group"><label>الراتب</label><input type="number" id="fSalary" min="0" step="0.01" value="${emp?.salary||'6000'}"></div>
+              <div class="form-group"><label>ساعات العمل</label><input type="number" id="fHours" min="1" value="${emp?.dailyhours||'8'}"></div>
+            </div>
+            <div class="form-group"><label>معدل الساعة الإضافية</label><input type="number" id="fOvertime" min="0" step="0.01" value="${emp?.overtimerate||'50'}"></div>
+            <button type="submit" class="btn btn-primary btn-block"><i class="fas fa-save"></i> ${isEdit ? 'تحديث' : 'حفظ'}</button>
+          </form>
+          
+          <div class="footer">
+            <i class="fas fa-code"></i> تم تطوير الموقع من قبل المبرمج عبد الله ندا
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('empForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const name = document.getElementById('fName').value.trim();
+        if (!name) { showToast('أدخل اسم الموظف', 'error'); return; }
+        const data = {
+          name,
+          position: document.getElementById('fPosition').value.trim(),
+          salary: parseFloat(document.getElementById('fSalary').value)||0,
+          dailyhours: parseInt(document.getElementById('fHours').value)||8,
+          overtimerate: parseFloat(document.getElementById('fOvertime').value)||0
+        };
+        try {
+          showLoading(true, isEdit ? 'جاري التحديث...' : 'جاري الحفظ...');
+          if (isEdit) await db.employees.update(id, data);
+          else { data.id = crypto.randomUUID(); await db.employees.create(data); }
+          await loadEmployees();
+          showLoading(false);
+          showToast(isEdit ? 'تم التحديث' : 'تم الإضافة', 'success');
+          goBack();
+        } catch(e) { 
+          showLoading(false); 
+          showToast('فشل الحفظ', 'error'); 
+        }
+      });
+    }
+
+    // =============================================
+    // الإضافة الجماعية (محسنة)
+    // =============================================
+    async function loadMultiSelect() {
+      if (!AUTH.isAdmin()) { showRestrictedModal(); return; }
+      await loadEmployees();
+      const app = document.getElementById('app');
+      app.innerHTML = `
+        <div class="container">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+            <h1 style="margin:0;border:none;padding:0;"><i class="fas fa-users"></i> إضافة جماعية</h1>
+            <button class="btn btn-secondary btn-sm" onclick="goBack()"><i class="fas fa-arrow-right"></i> رجوع</button>
+          </div>
+          
+          <div style="background:#f8f9fa;border-radius:10px;padding:15px;margin:15px 0;border:1px solid #e8ecf1;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+              <span style="font-weight:600;">اختر الموظفين</span>
+              <button class="btn btn-primary btn-sm" onclick="toggleAll()">تحديد الكل</button>
+            </div>
+            <div id="empCheckList">
+              ${appState.employees.map(e => `
+                <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f0f0f0;">
+                  <input type="checkbox" id="chk_${e.id}" value="${e.id}" style="width:auto;">
+                  <label for="chk_${e.id}" style="margin:0;font-weight:normal;cursor:pointer;">${e.name}</label>
+                </div>
+              `).join('')}
+            </div>
+            ${appState.employees.length === 0 ? '<div class="empty-state"><p>لا يوجد موظفين لإضافتهم</p></div>' : ''}
+          </div>
+          
+          <div style="background:#fff;border-radius:10px;padding:15px;margin-bottom:15px;border:1px solid #e8ecf1;">
+            <div class="section-title"><i class="fas fa-plus-circle"></i> بيانات اليوم</div>
+            <div class="row-2">
+              <div class="form-group"><label>التاريخ</label><input type="date" id="mDate" value="${new Date().toISOString().split('T')[0]}"></div>
+              <div class="form-group"><label>الموقع</label><input type="text" id="mSite" placeholder="اسم الموقع"></div>
+            </div>
+            <div class="row-2">
+              <div class="form-group"><label>الدخول</label><input type="time" id="mStart" value="08:00"></div>
+              <div class="form-group"><label>الخروج</label><input type="time" id="mEnd" value="16:00"></div>
+            </div>
+            <div class="row-2">
+              <div class="form-group"><label>مواصلات ذهاب</label><input type="number" id="mMorning" min="0" step="0.01" value="0"></div>
+              <div class="form-group"><label>مواصلات عودة</label><input type="number" id="mEvening" min="0" step="0.01" value="0"></div>
+            </div>
+            <div class="form-group"><label>البدل</label><input type="number" id="mAllowance" min="0" step="0.01" value="0"></div>
+            
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+              <button class="btn btn-primary" onclick="addMultiDays('work')"><i class="fas fa-check"></i> عمل</button>
+              <button class="btn btn-success" onclick="addMultiDays('vacation')"><i class="fas fa-umbrella-beach"></i> إجازة</button>
+              <button class="btn btn-danger" onclick="addMultiDays('unpaid')"><i class="fas fa-calendar-times"></i> غياب</button>
+            </div>
+          </div>
+          
+          <div class="footer">
+            <i class="fas fa-code"></i> تم تطوير الموقع من قبل المبرمج عبد الله ندا
+          </div>
+        </div>
+      `;
+    }
+
+    function toggleAll() {
+      const checkboxes = document.querySelectorAll('#empCheckList input[type="checkbox"]');
+      const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+      checkboxes.forEach(cb => cb.checked = !allChecked);
+    }
+
+    async function addMultiDays(type) {
+      if (!AUTH.isAdmin()) { showRestrictedModal(); return; }
+      const checkboxes = document.querySelectorAll('#empCheckList input[type="checkbox"]:checked');
+      const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+      
+      if (selectedIds.length === 0) {
+        showToast('الرجاء اختيار موظفين على الأقل', 'error');
+        return;
+      }
+      
+      const date = document.getElementById('mDate').value;
+      if (!date) { showToast('أدخل التاريخ', 'error'); return; }
+      
+      if (type === 'work') {
+        const start = document.getElementById('mStart').value;
+        const end = document.getElementById('mEnd').value;
+        if (!start || !end) { showToast('أدخل وقت الدخول والخروج', 'error'); return; }
+      }
+      
+      const data = {
+        date,
+        sitename: document.getElementById('mSite').value,
+        starttime: document.getElementById('mStart').value,
+        endtime: document.getElementById('mEnd').value,
+        morningtransport: parseFloat(document.getElementById('mMorning').value)||0,
+        eveningtransport: parseFloat(document.getElementById('mEvening').value)||0,
+        allowance: parseFloat(document.getElementById('mAllowance').value)||0,
+        type: type
+      };
+      
+      try {
+        showLoading(true, `جاري الإضافة لـ ${selectedIds.length} موظف...`);
+        let successCount = 0;
+        let failCount = 0;
+        
+        // استخدام Promise.all لتنفيذ العمليات بشكل متوازي
+        const promises = selectedIds.map(async (empId) => {
+          try {
+            const existing = appState.workRecords.filter(r => r.employee_id === empId && r.date === date);
+            if (existing.length > 0) {
+              await db.workRecords.update(existing[0].id, { ...data, employee_id: empId });
+            } else {
+              await db.workRecords.create({ id: crypto.randomUUID(), ...data, employee_id: empId });
+            }
+            await updateArchive(empId, date.substring(0,7));
+            successCount++;
+          } catch(e) {
+            failCount++;
+            console.warn(`فشل إضافة للموظف ${empId}:`, e);
+          }
+        });
+        
+        await Promise.all(promises);
+        
+        showLoading(false);
+        if (failCount === 0) {
+          showToast(`تم الإضافة لـ ${successCount} موظف بنجاح`, 'success');
+        } else {
+          showToast(`تم الإضافة لـ ${successCount} موظف، فشل ${failCount}`, 'error');
+        }
+        goBack();
+      } catch(e) {
+        showLoading(false);
+        showToast('فشل الإضافة: ' + e.message, 'error');
+      }
+    }
+
+    // =============================================
+    // صفحة العهدة
+    // =============================================
+    async function loadCashPage() {
+      await loadCash();
+      const isAdmin = AUTH.isAdmin();
+      
+      let balance = 0;
+      appState.cash.forEach(c => {
+        if (c.type === 'deposit') balance += parseFloat(c.amount)||0;
+        else if (c.type === 'withdraw') balance -= parseFloat(c.amount)||0;
+      });
+      
+      const app = document.getElementById('app');
+      app.innerHTML = `
+        <div class="container">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+            <h1 style="margin:0;border:none;padding:0;"><i class="fas fa-wallet"></i> العهدة</h1>
+            <button class="btn btn-secondary btn-sm" onclick="goBack()"><i class="fas fa-arrow-right"></i> رجوع</button>
+          </div>
+          
+          <div class="cash-box" style="margin-top:15px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-weight:600;">الرصيد الحالي</span>
+              <span class="balance ${balance < 0 ? 'negative' : ''}">${balance.toFixed(2)} ج.م</span>
+            </div>
+            
+            ${isAdmin ? `
+            <div class="row-2" style="margin-top:15px;">
+              <div>
+                <div class="form-group"><label>إيداع</label><input type="number" id="cDeposit" min="0" step="0.01" placeholder="المبلغ"></div>
+                <button class="btn btn-success btn-block" onclick="addCash('deposit')"><i class="fas fa-plus"></i> إيداع</button>
+              </div>
+              <div>
+                <div class="form-group"><label>صرف</label><input type="number" id="cWithdraw" min="0" step="0.01" placeholder="المبلغ"></div>
+                <div class="form-group"><label>البيان</label><input type="text" id="cReason" placeholder="سبب الصرف"></div>
+                <button class="btn btn-danger btn-block" onclick="addCash('withdraw')"><i class="fas fa-minus"></i> صرف</button>
+              </div>
+            </div>
+            ` : `
+            <div style="text-align:center;padding:10px;color:#888;">
+              <i class="fas fa-lock"></i> ليس لديك صلاحية للإيداع أو الصرف
+            </div>
+            `}
+          </div>
+          
+          <div style="background:#fff;border-radius:10px;padding:15px;border:1px solid #e8ecf1;">
+            <div class="section-title"><i class="fas fa-list"></i> سجل المعاملات</div>
+            <div class="cash-transactions">
+              ${appState.cash && appState.cash.length > 0 ? 
+                appState.cash.map(c => `
+                  <div class="item">
+                    <span>${c.date}</span>
+                    <span>${c.reason || 'بدون'}</span>
+                    <span class="${c.type === 'deposit' ? 'in' : 'out'}">${c.type === 'deposit' ? '+' : '-'} ${c.amount} ج.م</span>
+                    ${isAdmin ? `<span class="btn btn-danger btn-sm" onclick="deleteCash('${c.id}')" style="cursor:pointer;padding:0 4px;font-size:0.7rem;"><i class="fas fa-trash"></i></span>` : ''}
+                  </div>
+                `).join('') :
+                '<div class="no-data" style="padding:10px;">لا توجد معاملات</div>'
+              }
+            </div>
+          </div>
+          
+          <div class="footer">
+            <i class="fas fa-code"></i> تم تطوير الموقع من قبل المبرمج عبد الله ندا
+          </div>
+        </div>
+      `;
+    }
+
+    // =============================================
+    // دوال العهدة
+    // =============================================
+    async function addCash(type) {
+      if (!AUTH.isAdmin()) { showRestrictedModal(); return; }
+      let amount, reason = '';
+      
+      if (type === 'deposit') {
+        amount = parseFloat(document.getElementById('cDeposit').value);
+        if (!amount || amount <= 0) { showToast('أدخل مبلغ الإيداع', 'error'); return; }
+      } else {
+        amount = parseFloat(document.getElementById('cWithdraw').value);
+        reason = document.getElementById('cReason').value.trim();
+        if (!amount || amount <= 0) { showToast('أدخل مبلغ الصرف', 'error'); return; }
+        if (!reason) { showToast('أدخل سبب الصرف', 'error'); return; }
+      }
+      
+      try {
+        showLoading(true, 'جاري المعالجة...');
+        await db.cash.create({
+          id: crypto.randomUUID(),
+          date: new Date().toISOString().split('T')[0],
+          type: type,
+          amount: amount,
+          reason: reason
+        });
+        showLoading(false);
+        loadCashPage();
+        showToast(type === 'deposit' ? 'تم الإيداع بنجاح' : 'تم الصرف بنجاح', 'success');
+      } catch(e) {
+        showLoading(false);
+        showToast('فشل العملية: ' + e.message, 'error');
+      }
+    }
+
+    async function deleteCash(cashId) {
+      if (!AUTH.isAdmin()) { showRestrictedModal(); return; }
+      if (!confirm('حذف هذه المعاملة؟')) return;
+      try {
+        showLoading(true, 'جاري الحذف...');
+        await db.cash.delete(cashId);
+        showLoading(false);
+        loadCashPage();
+        showToast('تم الحذف', 'success');
+      } catch(e) {
+        showLoading(false);
+        showToast('فشل الحذف', 'error');
+      }
+    }
+
+    // =============================================
+    // صفحة الموظف
+    // =============================================
+    async function loadEmployeePage(id) {
+      const emp = appState.employees.find(e => e.id === id);
+      if (!emp) { loadPage('home'); return; }
+      await loadEmployeeData(id);
+      const s = appState.stats || {};
+      const isAdmin = AUTH.isAdmin();
+      
+      const app = document.getElementById('app');
+      app.innerHTML = `
+        <div class="container">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:15px;">
+            <h1 style="margin:0;border:none;padding:0;font-size:1.2rem;"><i class="fas fa-user"></i> ${emp.name}</h1>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <span style="font-size:0.8rem;color:#888;">${isAdmin ? '👑 مدير' : '👀 مشاهد'}</span>
+              <button class="btn btn-secondary btn-sm" onclick="goBack()"><i class="fas fa-arrow-right"></i> رجوع</button>
+              <button class="btn btn-danger btn-sm" onclick="logoutUser()"><i class="fas fa-sign-out-alt"></i> خروج</button>
+            </div>
+          </div>
+          
+          <div style="background:linear-gradient(135deg,#f8f9fa,#e9ecef);border-radius:10px;padding:12px 18px;margin-bottom:15px;border:1px solid #e8ecf1;">
+            <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:0.9rem;color:#666;">
+              <span><i class="fas fa-briefcase" style="color:var(--primary-color);"></i> ${emp.position||'لا يوجد'}</span>
+              <span><i class="fas fa-money-bill-wave" style="color:var(--primary-color);"></i> ${emp.salary} ج.م</span>
+              <span><i class="fas fa-clock" style="color:var(--primary-color);"></i> ${emp.dailyhours||8} ساعات</span>
+            </div>
+          </div>
+          
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:6px;margin-bottom:15px;">
+            <div style="background:#fff;border:1px solid #e8ecf1;border-radius:8px;padding:6px;text-align:center;">
+              <div style="font-size:0.65rem;color:#999;">أيام العمل</div>
+              <div style="font-size:1.1rem;font-weight:bold;color:var(--primary-color);">${s.workDays||0}</div>
+            </div>
+            <div style="background:#fff;border:1px solid #e8ecf1;border-radius:8px;padding:6px;text-align:center;">
+              <div style="font-size:0.65rem;color:#999;">الإجازات</div>
+              <div style="font-size:1.1rem;font-weight:bold;color:var(--success-color);">${s.vacationDays||0}</div>
+            </div>
+            <div style="background:#fff;border:1px solid #e8ecf1;border-radius:8px;padding:6px;text-align:center;">
+              <div style="font-size:0.65rem;color:#999;">الغياب</div>
+              <div style="font-size:1.1rem;font-weight:bold;color:var(--danger-color);">${s.unpaidDays||0}</div>
+            </div>
+            <div style="background:#fff;border:1px solid #e8ecf1;border-radius:8px;padding:6px;text-align:center;">
+              <div style="font-size:0.65rem;color:#999;">ساعات إضافية</div>
+              <div style="font-size:1.1rem;font-weight:bold;">${(s.overtimeHours||0).toFixed(1)}</div>
+            </div>
+            <div style="background:#fff;border:1px solid #e8ecf1;border-radius:8px;padding:6px;text-align:center;">
+              <div style="font-size:0.65rem;color:#999;">الرصيد</div>
+              <div style="font-size:1.1rem;font-weight:bold;color:var(--primary-color);">${(s.balance||0).toFixed(0)}</div>
+            </div>
+          </div>
+          
+          <div style="background:#f8f9fa;border-radius:8px;padding:10px 15px;margin-bottom:15px;border:1px solid #e8ecf1;font-size:0.85rem;">
+            <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed #e8ecf1;">
+              <span style="color:#666;">المستحقات</span>
+              <span style="color:var(--success-color);">${(s.totalEarnings||0).toFixed(2)} ج.م</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed #e8ecf1;">
+              <span style="color:#666;">خصم الغياب</span>
+              <span style="color:var(--danger-color);">-${(s.absentDeduction||0).toFixed(2)} ج.م</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed #e8ecf1;">
+              <span style="color:#666;">المسحوبات</span>
+              <span style="color:var(--danger-color);">-${(s.totalWithdrawals||0).toFixed(2)} ج.م</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed #e8ecf1;">
+              <span style="color:#666;">الجزاءات</span>
+              <span style="color:var(--danger-color);">-${(s.totalPenalties||0).toFixed(2)} ج.م</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:3px 0;font-weight:bold;font-size:0.95rem;">
+              <span>الرصيد النهائي</span>
+              <span style="color:${(s.balance||0)<0?'var(--danger-color)':'var(--success-color)'};">${(s.balance||0).toFixed(2)} ج.م</span>
+            </div>
+          </div>
+          
+          ${isAdmin ? `
+          <div style="background:#fff;border-radius:10px;padding:12px;margin-bottom:15px;border:1px solid #e8ecf1;">
+            <div class="section-title"><i class="fas fa-plus-circle"></i> إضافة يوم</div>
+            <div class="row-2">
+              <div class="form-group"><label>التاريخ</label><input type="date" id="dDate" value="${new Date().toISOString().split('T')[0]}"></div>
+              <div class="form-group"><label>الموقع</label><input type="text" id="dSite" placeholder="اسم الموقع"></div>
+            </div>
+            <div class="row-2">
+              <div class="form-group"><label>الدخول</label><input type="time" id="dStart" value="08:00"></div>
+              <div class="form-group"><label>الخروج</label><input type="time" id="dEnd" value="16:00"></div>
+            </div>
+            <div class="row-2">
+              <div class="form-group"><label>مواصلات ذهاب</label><input type="number" id="dMorning" min="0" step="0.01" value="0"></div>
+              <div class="form-group"><label>مواصلات عودة</label><input type="number" id="dEvening" min="0" step="0.01" value="0"></div>
+            </div>
+            <div class="form-group"><label>البدل</label><input type="number" id="dAllowance" min="0" step="0.01" value="0"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+              <button class="btn btn-primary" onclick="addDay('${id}','work')"><i class="fas fa-check"></i> عمل</button>
+              <button class="btn btn-success" onclick="addDay('${id}','vacation')"><i class="fas fa-umbrella-beach"></i> إجازة</button>
+              <button class="btn btn-danger" onclick="addDay('${id}','unpaid')"><i class="fas fa-calendar-times"></i> غياب</button>
+            </div>
+          </div>
+          
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:15px;">
+            <div style="background:#f8f9fa;border-radius:10px;padding:10px 12px;border:1px solid #e8ecf1;">
+              <h4 style="font-size:0.85rem;margin-bottom:6px;"><i class="fas fa-hand-holding-usd"></i> سحب</h4>
+              <input type="number" id="wAmount" min="0" step="0.01" placeholder="المبلغ">
+              <button class="btn btn-danger btn-block" onclick="addWithdrawal('${id}')"><i class="fas fa-minus"></i> سحب</button>
+              <div style="max-height:70px;overflow-y:auto;margin-top:5px;background:#fff;border-radius:6px;border:1px solid #e8ecf1;padding:3px;font-size:0.8rem;">
+                ${appState.withdrawals && appState.withdrawals.length > 0 ? 
+                  appState.withdrawals.map(w => `<div style="display:flex;justify-content:space-between;padding:2px 5px;border-bottom:1px solid #f0f0f0;"><span>${w.date} - ${w.amount} ج.م</span><span style="color:var(--danger-color);cursor:pointer;" onclick="deleteWithdrawal('${id}','${w.id}')"><i class="fas fa-trash"></i></span></div>`).join('') :
+                  '<div style="padding:5px;color:#999;text-align:center;">لا توجد</div>'
+                }
+              </div>
+            </div>
+            <div style="background:#f8f9fa;border-radius:10px;padding:10px 12px;border:1px solid #e8ecf1;">
+              <h4 style="font-size:0.85rem;margin-bottom:6px;"><i class="fas fa-gavel"></i> جزاء</h4>
+              <input type="number" id="pAmount" min="0" step="0.01" placeholder="القيمة">
+              <input type="text" id="pReason" placeholder="السبب">
+              <button class="btn btn-warning btn-block" onclick="addPenalty('${id}')"><i class="fas fa-plus"></i> إضافة</button>
+              <div style="max-height:70px;overflow-y:auto;margin-top:5px;background:#fff;border-radius:6px;border:1px solid #e8ecf1;padding:3px;font-size:0.8rem;">
+                ${appState.penalties && appState.penalties.length > 0 ? 
+                  appState.penalties.map(p => `<div style="display:flex;justify-content:space-between;padding:2px 5px;border-bottom:1px solid #f0f0f0;"><span>${p.date} - ${p.amount} ج.م (${p.reason||'بدون'})</span><span style="color:var(--danger-color);cursor:pointer;" onclick="deletePenalty('${id}','${p.id}')"><i class="fas fa-trash"></i></span></div>`).join('') :
+                  '<div style="padding:5px;color:#999;text-align:center;">لا توجد</div>'
+                }
+              </div>
+            </div>
+          </div>
+          ` : `
+          <div style="text-align:center;padding:15px;color:#888;background:#f8f9fa;border-radius:10px;margin-bottom:15px;">
+            <i class="fas fa-lock"></i> ليس لديك صلاحية للإضافة أو التعديل
+          </div>
+          `}
+          
+          <div style="margin-top:10px;overflow-x:auto;">
+            <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+              <button class="btn btn-primary btn-sm" onclick="loadPage('archive','${id}')"><i class="fas fa-archive"></i> الأرشيف</button>
+              <button class="btn btn-secondary btn-sm" onclick="goBack()"><i class="fas fa-arrow-right"></i> رجوع</button>
+              <button class="export-btn" onclick="exportTable('${id}')"><i class="fas fa-file-export"></i> تصدير</button>
+            </div>
+            <table>
+              <thead><tr><th>التاريخ</th><th>اليوم</th><th>الموقع</th><th>الدخول</th><th>الخروج</th><th>مواصلات</th><th>البدل</th><th>النوع</th>${isAdmin ? '<th></th>' : ''}</tr></thead>
+              <tbody>
+                ${appState.workRecords && appState.workRecords.length > 0 ? 
+                  appState.workRecords.map(r => {
+                    const days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+                    const d = new Date(r.date);
+                    let type = 'عمل', cls = '';
+                    if (r.type === 'vacation') { type = 'إجازة'; cls = 'style="background:rgba(40,167,69,0.06)"'; }
+                    if (r.type === 'unpaid') { type = 'غياب'; cls = 'style="background:rgba(220,53,69,0.06)"'; }
+                    return `<tr ${cls}>
+                      <td>${r.date}</td><td>${days[d.getDay()]}</td>
+                      <td>${r.sitename||'-'}</td>
+                      <td>${r.starttime||'-'}</td>
+                      <td>${r.endtime||'-'}</td>
+                      <td>${(parseFloat(r.morningtransport)||0)+(parseFloat(r.eveningtransport)||0)||'-'}</td>
+                      <td>${r.allowance||'-'}</td>
+                      <td>${type}</td>
+                      ${isAdmin ? `<td><button class="btn btn-danger btn-sm" onclick="deleteRecord('${id}','${r.id}')"><i class="fas fa-trash"></i></button></td>` : ''}
+                    </tr>`;
+                  }).join('') :
+                  `<tr><td colspan="${isAdmin ? 9 : 8}" class="no-data">لا توجد سجلات</td></tr>`
+                }
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="footer">
+            <i class="fas fa-code"></i> تم تطوير الموقع من قبل المبرمج عبد الله ندا
+          </div>
+        </div>
+      `;
+    }
+
+    // =============================================
+    // دوال الإجراءات
+    // =============================================
+    async function addDay(id, type) {
+      if (!AUTH.isAdmin()) { showRestrictedModal(); return; }
+      const date = document.getElementById('dDate').value;
+      if (!date) { showToast('أدخل التاريخ', 'error'); return; }
+      const data = {
+        employee_id: id, date, type,
+        sitename: document.getElementById('dSite').value,
+        starttime: document.getElementById('dStart').value,
+        endtime: document.getElementById('dEnd').value,
+        morningtransport: parseFloat(document.getElementById('dMorning').value)||0,
+        eveningtransport: parseFloat(document.getElementById('dEvening').value)||0,
+        allowance: parseFloat(document.getElementById('dAllowance').value)||0
+      };
+      if (type === 'work' && (!data.starttime || !data.endtime)) { showToast('أدخل وقت الدخول والخروج', 'error'); return; }
+      try {
+        showLoading(true, 'جاري الإضافة...');
+        const existing = appState.workRecords.find(r => r.date === date);
+        if (existing) {
+          if (!confirm('هذا التاريخ مسجل، تحديث؟')) { showLoading(false); return; }
+          await db.workRecords.update(existing.id, data);
+        } else {
+          data.id = crypto.randomUUID();
+          await db.workRecords.create(data);
+        }
+        await updateArchive(id, date.substring(0,7));
+        await loadEmployeeData(id);
+        showLoading(false);
+        loadPage('employee', id);
+        showToast(type === 'work' ? 'تم إضافة يوم العمل' : type === 'vacation' ? 'تم إضافة الإجازة (مدفوعة)' : 'تم إضافة الغياب (خصم يوم)', 'success');
+      } catch(e) { 
+        showLoading(false); 
+        showToast('فشل الإضافة: ' + e.message, 'error'); 
+      }
+    }
+
+    async function deleteRecord(empId, recId) {
+      if (!AUTH.isAdmin()) { showRestrictedModal(); return; }
+      if (!confirm('حذف هذا اليوم؟')) return;
+      try {
+        showLoading(true, 'جاري الحذف...');
+        const rec = appState.workRecords.find(r => r.id === recId);
+        await db.workRecords.delete(recId);
+        if (rec) await updateArchive(empId, rec.date.substring(0,7));
+        await loadEmployeeData(empId);
+        showLoading(false);
+        loadPage('employee', empId);
+        showToast('تم الحذف', 'success');
+      } catch(e) { 
+        showLoading(false); 
+        showToast('فشل الحذف: ' + e.message, 'error'); 
+      }
+    }
+
+    async function addWithdrawal(id) {
+      if (!AUTH.isAdmin()) { showRestrictedModal(); return; }
+      const amount = parseFloat(document.getElementById('wAmount').value);
+      if (!amount || amount <= 0) { showToast('أدخل مبلغ صحيح', 'error'); return; }
+      try {
+        showLoading(true, 'جاري السحب...');
+        await db.withdrawals.create({ id: crypto.randomUUID(), employee_id: id, date: new Date().toISOString().split('T')[0], amount });
+        await updateArchive(id, new Date().toISOString().substring(0,7));
+        await loadEmployeeData(id);
+        showLoading(false);
+        loadPage('employee', id);
+        showToast('تم السحب', 'success');
+      } catch(e) { 
+        showLoading(false); 
+        showToast('فشل السحب: ' + e.message, 'error'); 
+      }
+    }
+
+    async function deleteWithdrawal(empId, wId) {
+      if (!AUTH.isAdmin()) { showRestrictedModal(); return; }
+      if (!confirm('حذف هذا السحب؟')) return;
+      try { 
+        showLoading(true, 'جاري الحذف...'); 
+        await db.withdrawals.delete(wId); 
+        await loadEmployeeData(empId); 
+        showLoading(false); 
+        loadPage('employee', empId); 
+        showToast('تم الحذف', 'success'); 
+      } catch(e) { 
+        showLoading(false); 
+        showToast('فشل الحذف: ' + e.message, 'error'); 
+      }
+    }
+
+    async function addPenalty(id) {
+      if (!AUTH.isAdmin()) { showRestrictedModal(); return; }
+      const amount = parseFloat(document.getElementById('pAmount').value);
+      const reason = document.getElementById('pReason').value.trim();
+      if (!amount || amount <= 0) { showToast('أدخل قيمة صحيحة', 'error'); return; }
+      if (!reason) { showToast('أدخل سبب الجزاء', 'error'); return; }
+      try {
+        showLoading(true, 'جاري الإضافة...');
+        await db.penalties.create({ id: crypto.randomUUID(), employee_id: id, date: new Date().toISOString().split('T')[0], amount, reason });
+        await updateArchive(id, new Date().toISOString().substring(0,7));
+        await loadEmployeeData(id);
+        showLoading(false);
+        loadPage('employee', id);
+        showToast('تم إضافة الجزاء', 'success');
+      } catch(e) { 
+        showLoading(false); 
+        showToast('فشل الإضافة: ' + e.message, 'error'); 
+      }
+    }
+
+    async function deletePenalty(empId, pId) {
+      if (!AUTH.isAdmin()) { showRestrictedModal(); return; }
+      if (!confirm('حذف هذا الجزاء؟')) return;
+      try { 
+        showLoading(true, 'جاري الحذف...'); 
+        await db.penalties.delete(pId); 
+        await loadEmployeeData(empId); 
+        showLoading(false); 
+        loadPage('employee', empId); 
+        showToast('تم الحذف', 'success'); 
+      } catch(e) { 
+        showLoading(false); 
+        showToast('فشل الحذف: ' + e.message, 'error'); 
+      }
+    }
+
+    // =============================================
+    // الأرشيف
+    // =============================================
+    async function updateArchive(empId, month) {
+      try {
+        const emp = appState.employees.find(e => e.id === empId);
+        if (!emp) return;
+        const records = await db.workRecords.getByEmployee(empId);
+        const withdrawals = await db.withdrawals.getByEmployee(empId);
+        let penalties = [];
+        try { penalties = await db.penalties.getByEmployee(empId); } catch(e) {}
+        const mr = records.filter(r => r.date && r.date.startsWith(month));
+        const mw = withdrawals.filter(w => w.date && w.date.startsWith(month));
+        const mp = penalties.filter(p => p.date && p.date.startsWith(month));
+        const s = calculateStats(mr, mw, mp, emp);
+        await db.monthlyArchives.upsert({
+          employee_id: empId, month,
+          workdays: s.workDays, vacationdays: s.vacationDays, unpaiddays: s.unpaidDays,
+          vacationsalary: s.vacationSalary, absentdeduction: s.absentDeduction,
+          workdayssalary: s.workDaysSalary, overtimehours: s.overtimeHours, overtimessalary: s.overtimeSalary,
+          totalallowance: s.totalAllowance, totaltransport: s.totalTransport,
+          totalearnings: s.totalEarnings, totalwithdrawals: s.totalWithdrawals,
+          totalpenalties: s.totalPenalties, totaldeductions: s.totalDeductions, balance: s.balance
+        });
+      } catch(e) { console.warn('فشل الأرشيف:', e); }
+    }
+
+    async function loadArchivePage(id) {
+      const emp = appState.employees.find(e => e.id === id);
+      if (!emp) { loadPage('home'); return; }
+      try {
+        showLoading(true, 'جاري التحميل...');
+        const archives = await db.monthlyArchives.getByEmployee(id);
+        appState.monthlyArchives = archives || [];
+        showLoading(false);
+        const app = document.getElementById('app');
+        app.innerHTML = `
+          <div class="container">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+              <h1 style="margin:0;border:none;padding:0;"><i class="fas fa-archive"></i> الأرشيف - ${emp.name}</h1>
+              <button class="btn btn-secondary btn-sm" onclick="goBack()"><i class="fas fa-arrow-right"></i> رجوع</button>
+            </div>
+            
+            ${appState.monthlyArchives.length === 0 ? '<div class="empty-state"><i class="far fa-folder-open"></i><p>لا توجد سجلات</p></div>' :
+              appState.monthlyArchives.map(a => {
+                const [y,m] = a.month.split('-');
+                const mn = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'][parseInt(m)-1];
+                return `<div style="background:#fff;border:1px solid #e8ecf1;border-radius:10px;padding:10px 12px;margin-bottom:8px;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;padding-bottom:4px;border-bottom:1px dashed #e8ecf1;">
+                    <span style="font-weight:bold;color:var(--primary-color);">${mn} ${y}</span>
+                    <span style="color:#888;font-size:0.8rem;">${a.workdays||0} يوم عمل</span>
+                  </div>
+                  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:4px;">
+                    <div style="text-align:center;padding:3px;background:#f8f9fa;border-radius:4px;"><div style="font-size:0.6rem;color:#999;">عمل</div><div style="font-size:0.9rem;font-weight:bold;color:var(--primary-color)">${a.workdays||0}</div></div>
+                    <div style="text-align:center;padding:3px;background:#f8f9fa;border-radius:4px;"><div style="font-size:0.6rem;color:#999;">إجازة</div><div style="font-size:0.9rem;font-weight:bold;color:var(--success-color)">${a.vacationdays||0}</div></div>
+                    <div style="text-align:center;padding:3px;background:#f8f9fa;border-radius:4px;"><div style="font-size:0.6rem;color:#999;">غياب</div><div style="font-size:0.9rem;font-weight:bold;color:var(--danger-color)">${a.unpaiddays||0}</div></div>
+                    <div style="text-align:center;padding:3px;background:#f8f9fa;border-radius:4px;"><div style="font-size:0.6rem;color:#999;">ساعات إضافية</div><div style="font-size:0.9rem;font-weight:bold;">${(a.overtimehours||0).toFixed(1)}</div></div>
+                    <div style="text-align:center;padding:3px;background:#f8f9fa;border-radius:4px;"><div style="font-size:0.6rem;color:#999;">الرصيد</div><div style="font-size:0.9rem;font-weight:bold;color:${(a.balance||0)<0?'var(--danger-color)':'var(--primary-color)'}">${(a.balance||0).toFixed(0)}</div></div>
+                  </div>
+                </div>`;
+              }).join('')
+            }
+            
+            <div class="footer">
+              <i class="fas fa-code"></i> تم تطوير الموقع من قبل المبرمج عبد الله ندا
+            </div>
+          </div>
+        `;
+      } catch(e) { 
+        showLoading(false); 
+        showToast('فشل التحميل', 'error'); 
+      }
+    }
+
+    // =============================================
+    // تصدير
+    // =============================================
+    function exportTable(id) {
+      const emp = appState.employees.find(e => e.id === id);
+      if (!emp) return;
+      const table = document.querySelector('table');
+      const s = appState.stats || {};
+      const w = window.open('', '_blank');
+      w.document.write(`
+        <html dir="rtl"><head><title>تقرير - ${emp.name}</title>
+        <style>body{font-family:'Tajawal',Arial,sans-serif;padding:20px;direction:rtl}
+        table{width:100%;border-collapse:collapse;margin-top:15px}
+        th,td{border:1px solid #ddd;padding:8px;text-align:center}
+        th{background:#2c3e50;color:#fff}
+        .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:15px}
+        .stat{border:1px solid #ddd;border-radius:8px;padding:10px;text-align:center}
+        .stat .lbl{color:#888;font-size:0.8rem}
+        .stat .val{font-size:1.2rem;font-weight:bold}
+        .positive{color:#28a745}.negative{color:#dc3545}
+</style></head><body>
+        <h2>${emp.name}</h2>
+        <div class="stats">
+          <div class="stat"><div class="lbl">أيام العمل</div><div class="val">${s.workDays||0}</div></div>
+          <div class="stat"><div class="lbl">الإجازات</div><div class="val">${s.vacationDays||0}</div></div>
+          <div class="stat"><div class="lbl">الغياب</div><div class="val">${s.unpaidDays||0}</div></div>
+          <div class="stat"><div class="lbl">الرصيد</div><div class="val ${(s.balance||0)<0?'negative':'positive'}">${(s.balance||0).toFixed(2)}</div></div>
+        </div>
+        ${table.outerHTML}
+      </body></html>`);
+      w.document.close();
+      w.print();
+    }
+
+    // =============================================
+    // دوال التنقل
+    // =============================================
+    function goBack() {
+      if (!Navigation.back()) {
+        // إذا لم توجد صفحات سابقة، نذهب إلى الصفحة الرئيسية
+        Navigation.clear();
+        Navigation.push('home');
+        loadHomePage();
+      }
+    }
+
+    // =============================================
+    // تهيئة التطبيق
+    // =============================================
+    document.addEventListener('DOMContentLoaded', function() {
+      Navigation.init();
+      
+      if (AUTH.loadSession()) {
+        Navigation.push('home');
+        loadHomePage();
+      } else {
+        loadLoginPage();
+      }
+    });
+  </script>
+</body>
+</html>
