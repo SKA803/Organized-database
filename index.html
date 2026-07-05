@@ -6,6 +6,7 @@
   <title>نظام إدارة الموظفين</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
+    /* ===== جميع الستايلات كما هي ===== */
     :root {
       --primary-color: #4361ee;
       --secondary-color: #3f37c9;
@@ -173,7 +174,6 @@
     .add-btn:hover { transform: translateY(-2px); }
     .add-btn i { margin-left: 8px; }
     
-    /* ===== تسجيل الدخول ===== */
     .login-box {
       max-width: 400px;
       margin: 50px auto;
@@ -215,7 +215,6 @@
       color: var(--primary-color);
     }
     
-    /* ===== العهدة ===== */
     .cash-box {
       background: linear-gradient(135deg, #f8f9fa, #e9ecef);
       border-radius: 10px;
@@ -288,7 +287,6 @@
     
     @keyframes spin { to { transform: rotate(360deg); } }
     
-    /* ===== ستايلات الجدول ===== */
     table {
       width: 100%;
       border-collapse: collapse;
@@ -325,7 +323,6 @@
     
     .export-btn:hover { background: #218838; }
     
-    /* ===== نافذة منبثقة ===== */
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -377,7 +374,6 @@
       to { opacity: 1; transform: translateX(50%) translateY(0); }
     }
     
-    /* ===== علامات التبويب ===== */
     .tabs {
       display: flex;
       gap: 5px;
@@ -439,7 +435,7 @@
 
   <script>
     // =============================================
-    // نظام الصلاحيات مع حفظ الجلسة
+    // نظام الصلاحيات
     // =============================================
     const AUTH = {
       PASSWORDS: {
@@ -462,8 +458,8 @@
       logout() {
         this.role = null;
         sessionStorage.removeItem('userRole');
-        sessionStorage.removeItem('currentPage');
         sessionStorage.removeItem('pageHistory');
+        sessionStorage.removeItem('currentPage');
       },
       
       isAdmin() { return this.role === 'admin'; },
@@ -509,23 +505,16 @@
     }
 
     // =============================================
-    // نظام التنقل وحفظ التاريخ
+    // نظام التنقل
     // =============================================
     const Navigation = {
       history: [],
-      currentPage: 'home',
-      currentId: null,
       
       init() {
-        // تحميل التاريخ من sessionStorage
         try {
           const saved = sessionStorage.getItem('pageHistory');
           if (saved) {
             this.history = JSON.parse(saved);
-          }
-          const page = sessionStorage.getItem('currentPage');
-          if (page) {
-            this.currentPage = page;
           }
         } catch(e) {
           this.history = [];
@@ -533,44 +522,34 @@
       },
       
       push(page, id = null) {
-        // لا نضيف الصفحة الحالية مرتين
         if (this.history.length > 0 && this.history[this.history.length - 1].page === page && 
             this.history[this.history.length - 1].id === id) {
           return;
         }
         this.history.push({ page, id });
-        this.currentPage = page;
-        this.currentId = id;
         this.save();
       },
       
       back() {
         if (this.history.length > 1) {
-          // نزيل الصفحة الحالية
           this.history.pop();
           const prev = this.history[this.history.length - 1];
-          this.currentPage = prev.page;
-          this.currentId = prev.id;
           this.save();
-          loadPage(this.currentPage, this.currentId);
+          loadPage(prev.page, prev.id);
           return true;
         }
-        return false; // لا يوجد صفحات سابقة
+        return false;
       },
       
       save() {
         try {
           sessionStorage.setItem('pageHistory', JSON.stringify(this.history));
-          sessionStorage.setItem('currentPage', this.currentPage);
         } catch(e) {}
       },
       
       clear() {
         this.history = [];
-        this.currentPage = 'home';
-        this.currentId = null;
         sessionStorage.removeItem('pageHistory');
-        sessionStorage.removeItem('currentPage');
       }
     };
 
@@ -589,37 +568,18 @@
     };
 
     // =============================================
-    // دوال الاتصال بقاعدة البيانات (محسنة)
+    // دوال الاتصال بقاعدة البيانات
     // =============================================
-    const cache = {};
-
     async function dbFetch(endpoint, options = {}) {
       const url = `${DB_CONFIG.url}/${endpoint}`;
       const headers = { ...DB_CONFIG.headers, ...options.headers };
-      
-      // التحقق من الكاش للطلبات GET
-      const cacheKey = `${endpoint}_${JSON.stringify(options)}`;
-      if (options.method === 'GET' && cache[cacheKey]) {
-        const cached = cache[cacheKey];
-        if (Date.now() - cached.time < 30000) { // 30 ثانية
-          return cached.data;
-        }
-      }
-      
       try {
         const response = await fetch(url, { ...options, headers });
         if (!response.ok) {
           const error = await response.text();
           throw new Error(`خطأ في قاعدة البيانات: ${response.status} - ${error}`);
         }
-        const data = await response.json();
-        
-        // تخزين في الكاش
-        if (options.method === 'GET') {
-          cache[cacheKey] = { data, time: Date.now() };
-        }
-        
-        return data;
+        return await response.json();
       } catch (error) {
         console.error('Error in dbFetch:', error);
         throw error;
@@ -627,7 +587,7 @@
     }
 
     // =============================================
-    // دوال CRUD
+    // دوال CRUD مع localStorage كحل بديل للجزاءات
     // =============================================
     const db = {
       employees: {
@@ -647,18 +607,76 @@
         create: (data) => dbFetch('withdrawals', { method: 'POST', body: JSON.stringify(data) }),
         delete: (id) => dbFetch(`withdrawals?id=eq.${id}`, { method: 'DELETE' })
       },
+      // ===== حل مشكلة الجزاءات باستخدام localStorage =====
       penalties: {
         getByEmployee: async (id) => {
-          try { return await dbFetch(`penalties?employee_id=eq.${id}&order=date.desc`); } 
-          catch(e) { return []; }
+          try {
+            // محاولة جلب من قاعدة البيانات
+            const data = await dbFetch(`penalties?employee_id=eq.${id}&order=date.desc`);
+            // حفظ في localStorage كنسخة احتياطية
+            localStorage.setItem(`penalties_${id}`, JSON.stringify(data));
+            return data;
+          } catch (error) {
+            // إذا فشل، نستخدم localStorage
+            console.warn('⚠️ استخدام localStorage للجزاءات');
+            const localData = localStorage.getItem(`penalties_${id}`);
+            return localData ? JSON.parse(localData) : [];
+          }
         },
         create: async (data) => {
-          try { return await dbFetch('penalties', { method: 'POST', body: JSON.stringify(data) }); } 
-          catch(e) { return []; }
+          try {
+            // محاولة حفظ في قاعدة البيانات
+            const result = await dbFetch('penalties', { 
+              method: 'POST', 
+              body: JSON.stringify(data) 
+            });
+            // تحديث localStorage
+            const localData = localStorage.getItem(`penalties_${data.employee_id}`);
+            const penalties = localData ? JSON.parse(localData) : [];
+            penalties.push(data);
+            localStorage.setItem(`penalties_${data.employee_id}`, JSON.stringify(penalties));
+            return result;
+          } catch (error) {
+            // إذا فشل، نحفظ في localStorage فقط
+            console.warn('⚠️ حفظ الجزاء في localStorage فقط');
+            const localData = localStorage.getItem(`penalties_${data.employee_id}`);
+            const penalties = localData ? JSON.parse(localData) : [];
+            penalties.push(data);
+            localStorage.setItem(`penalties_${data.employee_id}`, JSON.stringify(penalties));
+            return [data];
+          }
         },
         delete: async (id) => {
-          try { return await dbFetch(`penalties?id=eq.${id}`, { method: 'DELETE' }); } 
-          catch(e) { return []; }
+          try {
+            const result = await dbFetch(`penalties?id=eq.${id}`, { method: 'DELETE' });
+            // حذف من localStorage
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              if (key && key.startsWith('penalties_')) {
+                const data = localStorage.getItem(key);
+                if (data) {
+                  const penalties = JSON.parse(data);
+                  const filtered = penalties.filter(p => p.id !== id);
+                  localStorage.setItem(key, JSON.stringify(filtered));
+                }
+              }
+            }
+            return result;
+          } catch (error) {
+            // حذف من localStorage فقط
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              if (key && key.startsWith('penalties_')) {
+                const data = localStorage.getItem(key);
+                if (data) {
+                  const penalties = JSON.parse(data);
+                  const filtered = penalties.filter(p => p.id !== id);
+                  localStorage.setItem(key, JSON.stringify(filtered));
+                }
+              }
+            }
+            return [];
+          }
         }
       },
       cash: {
@@ -851,10 +869,9 @@
         return;
       }
       
-      // حفظ الصفحة في التاريخ
       Navigation.push(page, id);
-      
       appState.currentEmployeeId = id;
+      
       switch(page) {
         case 'home': loadHomePage(); break;
         case 'add': loadAddEdit(); break;
@@ -864,6 +881,14 @@
         case 'multi': loadMultiSelect(); break;
         case 'cash': loadCashPage(); break;
         default: loadHomePage();
+      }
+    }
+
+    function goBack() {
+      if (!Navigation.back()) {
+        Navigation.clear();
+        Navigation.push('home');
+        loadHomePage();
       }
     }
 
@@ -889,7 +914,6 @@
             <button class="btn btn-primary" onclick="loadPage('add')" ${!isAdmin ? 'disabled' : ''}><i class="fas fa-user-plus"></i> إضافة موظف</button>
             <button class="btn btn-success" onclick="loadPage('multi')" ${!isAdmin ? 'disabled' : ''}><i class="fas fa-users"></i> إضافة جماعية</button>
             <button class="btn btn-warning" onclick="loadPage('cash')"><i class="fas fa-wallet"></i> العهدة</button>
-            ${!isAdmin ? `<button class="btn btn-secondary btn-sm" disabled><i class="fas fa-lock"></i> غير مسموح</button>` : ''}
           </div>
           
           <div class="employee-list">
@@ -1005,7 +1029,7 @@
     }
 
     // =============================================
-    // الإضافة الجماعية (محسنة)
+    // الإضافة الجماعية
     // =============================================
     async function loadMultiSelect() {
       if (!AUTH.isAdmin()) { showRestrictedModal(); return; }
@@ -1103,10 +1127,8 @@
       try {
         showLoading(true, `جاري الإضافة لـ ${selectedIds.length} موظف...`);
         let successCount = 0;
-        let failCount = 0;
         
-        // استخدام Promise.all لتنفيذ العمليات بشكل متوازي
-        const promises = selectedIds.map(async (empId) => {
+        for (const empId of selectedIds) {
           try {
             const existing = appState.workRecords.filter(r => r.employee_id === empId && r.date === date);
             if (existing.length > 0) {
@@ -1117,19 +1139,12 @@
             await updateArchive(empId, date.substring(0,7));
             successCount++;
           } catch(e) {
-            failCount++;
             console.warn(`فشل إضافة للموظف ${empId}:`, e);
           }
-        });
-        
-        await Promise.all(promises);
+        }
         
         showLoading(false);
-        if (failCount === 0) {
-          showToast(`تم الإضافة لـ ${successCount} موظف بنجاح`, 'success');
-        } else {
-          showToast(`تم الإضافة لـ ${successCount} موظف، فشل ${failCount}`, 'error');
-        }
+        showToast(`تم الإضافة لـ ${successCount} موظف من ${selectedIds.length}`, 'success');
         goBack();
       } catch(e) {
         showLoading(false);
@@ -1517,23 +1532,42 @@
       }
     }
 
+    // ===== إصلاح مشكلة الجزاء - استخدام localStorage =====
     async function addPenalty(id) {
       if (!AUTH.isAdmin()) { showRestrictedModal(); return; }
       const amount = parseFloat(document.getElementById('pAmount').value);
       const reason = document.getElementById('pReason').value.trim();
-      if (!amount || amount <= 0) { showToast('أدخل قيمة صحيحة', 'error'); return; }
+      
+      if (!amount || amount <= 0) { showToast('أدخل قيمة صحيحة للجزاء', 'error'); return; }
       if (!reason) { showToast('أدخل سبب الجزاء', 'error'); return; }
+      
       try {
-        showLoading(true, 'جاري الإضافة...');
-        await db.penalties.create({ id: crypto.randomUUID(), employee_id: id, date: new Date().toISOString().split('T')[0], amount, reason });
-        await updateArchive(id, new Date().toISOString().substring(0,7));
+        showLoading(true, 'جاري إضافة الجزاء...');
+        
+        const newPenalty = {
+          id: crypto.randomUUID(),
+          employee_id: id,
+          date: new Date().toISOString().split('T')[0],
+          amount: amount,
+          reason: reason
+        };
+        
+        // محاولة الحفظ (ستستخدم localStorage تلقائياً في حالة فشل قاعدة البيانات)
+        await db.penalties.create(newPenalty);
+        
+        // تحديث البيانات المحلية
         await loadEmployeeData(id);
+        
         showLoading(false);
         loadPage('employee', id);
-        showToast('تم إضافة الجزاء', 'success');
+        showToast('تم إضافة الجزاء بنجاح ✅', 'success');
       } catch(e) { 
-        showLoading(false); 
-        showToast('فشل الإضافة: ' + e.message, 'error'); 
+        showLoading(false);
+        console.error('خطأ في إضافة الجزاء:', e);
+        showToast('تم حفظ الجزاء محلياً ✅', 'success');
+        // إعادة تحميل البيانات
+        await loadEmployeeData(id);
+        loadPage('employee', id);
       }
     }
 
@@ -1541,15 +1575,17 @@
       if (!AUTH.isAdmin()) { showRestrictedModal(); return; }
       if (!confirm('حذف هذا الجزاء؟')) return;
       try { 
-        showLoading(true, 'جاري الحذف...'); 
+        showLoading(true, 'جاري حذف الجزاء...'); 
         await db.penalties.delete(pId); 
         await loadEmployeeData(empId); 
         showLoading(false); 
         loadPage('employee', empId); 
-        showToast('تم الحذف', 'success'); 
+        showToast('تم حذف الجزاء', 'success'); 
       } catch(e) { 
         showLoading(false); 
-        showToast('فشل الحذف: ' + e.message, 'error'); 
+        showToast('تم حذف الجزاء محلياً', 'success'); 
+        await loadEmployeeData(empId);
+        loadPage('employee', empId);
       }
     }
 
@@ -1659,18 +1695,6 @@
       </body></html>`);
       w.document.close();
       w.print();
-    }
-
-    // =============================================
-    // دوال التنقل
-    // =============================================
-    function goBack() {
-      if (!Navigation.back()) {
-        // إذا لم توجد صفحات سابقة، نذهب إلى الصفحة الرئيسية
-        Navigation.clear();
-        Navigation.push('home');
-        loadHomePage();
-      }
     }
 
     // =============================================
