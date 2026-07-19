@@ -414,6 +414,15 @@
       .container { padding: 8px 10px; }
       .login-box { margin: 20px 10px; padding: 20px; }
     }
+    
+    .overtime-badge {
+      background: #fff3cd;
+      color: #856404;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
   </style>
 </head>
 <body>
@@ -579,7 +588,8 @@
           const error = await response.text();
           throw new Error(`خطأ في قاعدة البيانات: ${response.status} - ${error}`);
         }
-        return await response.json();
+        const text = await response.text();
+        return text ? JSON.parse(text) : [];
       } catch (error) {
         console.error('Error in dbFetch:', error);
         throw error;
@@ -587,7 +597,7 @@
     }
 
     // =============================================
-    // دوال CRUD مع localStorage كحل بديل للجزاءات
+    // دوال CRUD
     // =============================================
     const db = {
       employees: {
@@ -607,17 +617,13 @@
         create: (data) => dbFetch('withdrawals', { method: 'POST', body: JSON.stringify(data) }),
         delete: (id) => dbFetch(`withdrawals?id=eq.${id}`, { method: 'DELETE' })
       },
-      // ===== حل مشكلة الجزاءات باستخدام localStorage =====
       penalties: {
         getByEmployee: async (id) => {
           try {
-            // محاولة جلب من قاعدة البيانات
             const data = await dbFetch(`penalties?employee_id=eq.${id}&order=date.desc`);
-            // حفظ في localStorage كنسخة احتياطية
             localStorage.setItem(`penalties_${id}`, JSON.stringify(data));
             return data;
           } catch (error) {
-            // إذا فشل، نستخدم localStorage
             console.warn('⚠️ استخدام localStorage للجزاءات');
             const localData = localStorage.getItem(`penalties_${id}`);
             return localData ? JSON.parse(localData) : [];
@@ -625,19 +631,16 @@
         },
         create: async (data) => {
           try {
-            // محاولة حفظ في قاعدة البيانات
             const result = await dbFetch('penalties', { 
               method: 'POST', 
               body: JSON.stringify(data) 
             });
-            // تحديث localStorage
             const localData = localStorage.getItem(`penalties_${data.employee_id}`);
             const penalties = localData ? JSON.parse(localData) : [];
             penalties.push(data);
             localStorage.setItem(`penalties_${data.employee_id}`, JSON.stringify(penalties));
             return result;
           } catch (error) {
-            // إذا فشل، نحفظ في localStorage فقط
             console.warn('⚠️ حفظ الجزاء في localStorage فقط');
             const localData = localStorage.getItem(`penalties_${data.employee_id}`);
             const penalties = localData ? JSON.parse(localData) : [];
@@ -649,7 +652,6 @@
         delete: async (id) => {
           try {
             const result = await dbFetch(`penalties?id=eq.${id}`, { method: 'DELETE' });
-            // حذف من localStorage
             for (let i = 0; i < localStorage.length; i++) {
               const key = localStorage.key(i);
               if (key && key.startsWith('penalties_')) {
@@ -663,7 +665,6 @@
             }
             return result;
           } catch (error) {
-            // حذف من localStorage فقط
             for (let i = 0; i < localStorage.length; i++) {
               const key = localStorage.key(i);
               if (key && key.startsWith('penalties_')) {
@@ -686,12 +687,53 @@
       },
       monthlyArchives: {
         getByEmployee: (id) => dbFetch(`monthly_archives?employee_id=eq.${id}&order=month.desc`),
-        upsert: (data) => dbFetch('monthly_archives', { method: 'POST', body: JSON.stringify(data), headers: { ...DB_CONFIG.headers, 'Prefer': 'return=representation,resolution=merge-duplicates' } })
+        upsert: (data) => dbFetch('monthly_archives', { 
+          method: 'POST', 
+          body: JSON.stringify(data), 
+          headers: { ...DB_CONFIG.headers, 'Prefer': 'return=representation,resolution=merge-duplicates' } 
+        })
       }
     };
 
     // =============================================
-    // حساب الإحصائيات
+    // دالة حساب الساعات الإضافية - تم إصلاحها
+    // =============================================
+    function calculateOvertimeHours(startTime, endTime, dailyHours) {
+      if (!startTime || !endTime) return 0;
+      
+      try {
+        // تحويل الوقت إلى دقائق لتسهيل الحساب
+        function timeToMinutes(timeStr) {
+          const [hours, minutes] = timeStr.split(':').map(Number);
+          return hours * 60 + minutes;
+        }
+        
+        const startMinutes = timeToMinutes(startTime);
+        const endMinutes = timeToMinutes(endTime);
+        
+        // حساب إجمالي ساعات العمل
+        let totalMinutes = endMinutes - startMinutes;
+        
+        // إذا كان وقت النهاية أقل من وقت البداية (عمل عبر منتصف الليل)
+        if (totalMinutes < 0) {
+          totalMinutes += 24 * 60;
+        }
+        
+        const totalHours = totalMinutes / 60;
+        const regularHours = dailyHours || 8;
+        
+        // الساعات الإضافية = إجمالي الساعات - الساعات العادية
+        const overtimeHours = Math.max(0, totalHours - regularHours);
+        
+        return overtimeHours;
+      } catch(e) {
+        console.error('خطأ في حساب الساعات الإضافية:', e);
+        return 0;
+      }
+    }
+
+    // =============================================
+    // حساب الإحصائيات مع معالجة الساعات الإضافية
     // =============================================
     function calculateStats(records, withdrawals, penalties, emp) {
       const dailyHours = emp?.dailyhours || 8;
@@ -705,6 +747,10 @@
       let overtimeHours = 0, overtimeSalary = 0;
       let totalAllowance = 0, totalTransport = 0;
 
+      console.log('بدء حساب الإحصائيات...');
+      console.log('الساعات اليومية:', dailyHours);
+      console.log('معدل الساعة الإضافية:', overtimeRate);
+
       records.forEach(r => {
         if (r.type === 'vacation') {
           vacationDays++;
@@ -715,21 +761,21 @@
           unpaidDays++;
           return;
         }
+        
+        // يوم عمل
         workDays++;
         workDaysSalary += dailyRate;
         totalTransport += (parseFloat(r.morningtransport)||0) + (parseFloat(r.eveningtransport)||0);
         totalAllowance += parseFloat(r.allowance)||0;
+        
+        // حساب الساعات الإضافية
         if (r.starttime && r.endtime) {
-          try {
-            const start = new Date(`1970-01-01T${r.starttime}`);
-            const end = new Date(`1970-01-01T${r.endtime}`);
-            const hours = (end - start) / (1000 * 60 * 60);
-            if (hours > dailyHours) {
-              const extra = hours - dailyHours;
-              overtimeHours += extra;
-              overtimeSalary += extra * overtimeRate;
-            }
-          } catch(e) {}
+          const extraHours = calculateOvertimeHours(r.starttime, r.endtime, dailyHours);
+          if (extraHours > 0) {
+            overtimeHours += extraHours;
+            overtimeSalary += extraHours * overtimeRate;
+            console.log(`يوم ${r.date}: من ${r.starttime} إلى ${r.endtime} = ${extraHours.toFixed(2)} ساعة إضافية`);
+          }
         }
       });
 
@@ -744,6 +790,10 @@
       
       const totalDeductions = absentDeduction + totalWithdrawals + totalPenalties;
       const balance = totalEarnings - totalDeductions;
+
+      console.log('نتائج الحساب:', {
+        workDays, overtimeHours, overtimeSalary, totalEarnings, balance
+      });
 
       return {
         workDays, vacationDays, unpaidDays,
@@ -800,7 +850,10 @@
         try { p = await db.penalties.getByEmployee(id); } catch(e) {}
         appState.workRecords = r||[]; appState.withdrawals = w||[]; appState.penalties = p||[];
         const emp = appState.employees.find(e => e.id === id);
-        appState.stats = emp ? calculateStats(appState.workRecords, appState.withdrawals, appState.penalties, emp) : null;
+        if (emp) {
+          console.log('بيانات الموظف:', emp);
+          appState.stats = calculateStats(appState.workRecords, appState.withdrawals, appState.penalties, emp);
+        }
         showLoading(false);
         return appState.stats;
       } catch(e) { 
@@ -1222,9 +1275,6 @@
       `;
     }
 
-    // =============================================
-    // دوال العهدة
-    // =============================================
     async function addCash(type) {
       if (!AUTH.isAdmin()) { showRestrictedModal(); return; }
       let amount, reason = '';
@@ -1329,6 +1379,10 @@
             <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed #e8ecf1;">
               <span style="color:#666;">المستحقات</span>
               <span style="color:var(--success-color);">${(s.totalEarnings||0).toFixed(2)} ج.م</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed #e8ecf1;">
+              <span style="color:#666;">الساعات الإضافية</span>
+              <span style="color:var(--primary-color);">${(s.overtimeHours||0).toFixed(1)} ساعة (${(s.overtimeSalary||0).toFixed(2)} ج.م)</span>
             </div>
             <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed #e8ecf1;">
               <span style="color:#666;">خصم الغياب</span>
@@ -1442,9 +1496,6 @@
       `;
     }
 
-    // =============================================
-    // دوال الإجراءات
-    // =============================================
     async function addDay(id, type) {
       if (!AUTH.isAdmin()) { showRestrictedModal(); return; }
       const date = document.getElementById('dDate').value;
@@ -1532,7 +1583,6 @@
       }
     }
 
-    // ===== إصلاح مشكلة الجزاء - استخدام localStorage =====
     async function addPenalty(id) {
       if (!AUTH.isAdmin()) { showRestrictedModal(); return; }
       const amount = parseFloat(document.getElementById('pAmount').value);
@@ -1552,10 +1602,7 @@
           reason: reason
         };
         
-        // محاولة الحفظ (ستستخدم localStorage تلقائياً في حالة فشل قاعدة البيانات)
         await db.penalties.create(newPenalty);
-        
-        // تحديث البيانات المحلية
         await loadEmployeeData(id);
         
         showLoading(false);
@@ -1565,7 +1612,6 @@
         showLoading(false);
         console.error('خطأ في إضافة الجزاء:', e);
         showToast('تم حفظ الجزاء محلياً ✅', 'success');
-        // إعادة تحميل البيانات
         await loadEmployeeData(id);
         loadPage('employee', id);
       }
