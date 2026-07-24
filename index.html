@@ -696,13 +696,12 @@
     };
 
     // =============================================
-    // دالة حساب الساعات الإضافية - تم إصلاحها
+    // دالة حساب الساعات الإضافية
     // =============================================
     function calculateOvertimeHours(startTime, endTime, dailyHours) {
       if (!startTime || !endTime) return 0;
       
       try {
-        // تحويل الوقت إلى دقائق لتسهيل الحساب
         function timeToMinutes(timeStr) {
           const [hours, minutes] = timeStr.split(':').map(Number);
           return hours * 60 + minutes;
@@ -711,10 +710,8 @@
         const startMinutes = timeToMinutes(startTime);
         const endMinutes = timeToMinutes(endTime);
         
-        // حساب إجمالي ساعات العمل
         let totalMinutes = endMinutes - startMinutes;
         
-        // إذا كان وقت النهاية أقل من وقت البداية (عمل عبر منتصف الليل)
         if (totalMinutes < 0) {
           totalMinutes += 24 * 60;
         }
@@ -722,7 +719,6 @@
         const totalHours = totalMinutes / 60;
         const regularHours = dailyHours || 8;
         
-        // الساعات الإضافية = إجمالي الساعات - الساعات العادية
         const overtimeHours = Math.max(0, totalHours - regularHours);
         
         return overtimeHours;
@@ -733,54 +729,56 @@
     }
 
     // =============================================
-    // حساب الإحصائيات مع معالجة الساعات الإضافية
+    // حساب الإحصائيات - النسخة النهائية الصحيحة
     // =============================================
     function calculateStats(records, withdrawals, penalties, emp) {
       const dailyHours = emp?.dailyhours || 8;
-      const overtimeRate = emp?.overtimerate || 0;
       const salary = emp?.salary || 0;
       const dailyRate = salary / 30;
 
-      let workDays = 0, workDaysSalary = 0;
-      let vacationDays = 0, vacationSalary = 0;
+      let workDays = 0;
+      let vacationDays = 0;
       let unpaidDays = 0;
-      let overtimeHours = 0, overtimeSalary = 0;
+      let totalOvertimeHours = 0;
       let totalAllowance = 0, totalTransport = 0;
 
-      console.log('بدء حساب الإحصائيات...');
-      console.log('الساعات اليومية:', dailyHours);
-      console.log('معدل الساعة الإضافية:', overtimeRate);
-
+      // حساب أيام العمل والساعات الإضافية
       records.forEach(r => {
         if (r.type === 'vacation') {
           vacationDays++;
-          vacationSalary += dailyRate;
           return;
         }
         if (r.type === 'unpaid') {
-          unpaidDays++;
+          unpaidDays++;  // بس بنحسبهم للتقرير، مش بنضيفهم في المستحقات
           return;
         }
         
         // يوم عمل
         workDays++;
-        workDaysSalary += dailyRate;
         totalTransport += (parseFloat(r.morningtransport)||0) + (parseFloat(r.eveningtransport)||0);
         totalAllowance += parseFloat(r.allowance)||0;
         
-        // حساب الساعات الإضافية
+        // حساب الساعات الإضافية لهذا اليوم
         if (r.starttime && r.endtime) {
           const extraHours = calculateOvertimeHours(r.starttime, r.endtime, dailyHours);
           if (extraHours > 0) {
-            overtimeHours += extraHours;
-            overtimeSalary += extraHours * overtimeRate;
-            console.log(`يوم ${r.date}: من ${r.starttime} إلى ${r.endtime} = ${extraHours.toFixed(2)} ساعة إضافية`);
+            totalOvertimeHours += extraHours;
           }
         }
       });
 
-      const totalEarnings = workDaysSalary + vacationSalary + overtimeSalary + totalAllowance + totalTransport;
-      const absentDeduction = unpaidDays * dailyRate;
+      // تحويل الساعات الإضافية إلى أيام إضافية
+      const extraDays = totalOvertimeHours / dailyHours;
+      
+      // إجمالي الأيام المدفوعة = أيام العمل + الأيام الإضافية + أيام الإجازة
+      // (الغياب مش داخل في الحسبة)
+      const totalPaidDays = workDays + extraDays + vacationDays;
+      
+      // المستحقات = الأيام المدفوعة × قيمة اليوم
+      const totalEarnings = totalPaidDays * dailyRate + totalAllowance + totalTransport;
+      
+      // خصم الغياب = صفر (لأننا مش بنحسبه من الأساس)
+      const absentDeduction = 0;
       
       let totalWithdrawals = 0;
       withdrawals.forEach(w => totalWithdrawals += parseFloat(w.amount)||0);
@@ -788,20 +786,24 @@
       let totalPenalties = 0;
       if (penalties) penalties.forEach(p => totalPenalties += parseFloat(p.amount)||0);
       
-      const totalDeductions = absentDeduction + totalWithdrawals + totalPenalties;
+      const totalDeductions = totalWithdrawals + totalPenalties;
       const balance = totalEarnings - totalDeductions;
 
-      console.log('نتائج الحساب:', {
-        workDays, overtimeHours, overtimeSalary, totalEarnings, balance
-      });
-
       return {
-        workDays, vacationDays, unpaidDays,
-        vacationSalary, absentDeduction,
-        workDaysSalary, overtimeHours, overtimeSalary,
-        totalAllowance, totalTransport,
-        totalEarnings, totalWithdrawals, totalPenalties,
-        totalDeductions, balance
+        workDays: totalPaidDays,
+        normalWorkDays: workDays,
+        extraDays: extraDays,
+        vacationDays, 
+        unpaidDays,
+        absentDeduction,
+        totalEarnings, 
+        totalWithdrawals, 
+        totalPenalties,
+        totalDeductions, 
+        balance,
+        overtimeHours: totalOvertimeHours,
+        totalAllowance,
+        totalTransport
       };
     }
 
@@ -851,7 +853,6 @@
         appState.workRecords = r||[]; appState.withdrawals = w||[]; appState.penalties = p||[];
         const emp = appState.employees.find(e => e.id === id);
         if (emp) {
-          console.log('بيانات الموظف:', emp);
           appState.stats = calculateStats(appState.workRecords, appState.withdrawals, appState.penalties, emp);
         }
         showLoading(false);
@@ -1043,9 +1044,8 @@
             <div class="form-group"><label>الوظيفة</label><input type="text" id="fPosition" value="${emp?.position||''}"></div>
             <div class="row-2">
               <div class="form-group"><label>الراتب</label><input type="number" id="fSalary" min="0" step="0.01" value="${emp?.salary||'6000'}"></div>
-              <div class="form-group"><label>ساعات العمل</label><input type="number" id="fHours" min="1" value="${emp?.dailyhours||'8'}"></div>
+              <div class="form-group"><label>ساعات العمل اليومية</label><input type="number" id="fHours" min="1" value="${emp?.dailyhours||'8'}"></div>
             </div>
-            <div class="form-group"><label>معدل الساعة الإضافية</label><input type="number" id="fOvertime" min="0" step="0.01" value="${emp?.overtimerate||'50'}"></div>
             <button type="submit" class="btn btn-primary btn-block"><i class="fas fa-save"></i> ${isEdit ? 'تحديث' : 'حفظ'}</button>
           </form>
           
@@ -1063,8 +1063,7 @@
           name,
           position: document.getElementById('fPosition').value.trim(),
           salary: parseFloat(document.getElementById('fSalary').value)||0,
-          dailyhours: parseInt(document.getElementById('fHours').value)||8,
-          overtimerate: parseFloat(document.getElementById('fOvertime').value)||0
+          dailyhours: parseInt(document.getElementById('fHours').value)||8
         };
         try {
           showLoading(true, isEdit ? 'جاري التحديث...' : 'جاري الحفظ...');
@@ -1348,45 +1347,61 @@
             <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:0.9rem;color:#666;">
               <span><i class="fas fa-briefcase" style="color:var(--primary-color);"></i> ${emp.position||'لا يوجد'}</span>
               <span><i class="fas fa-money-bill-wave" style="color:var(--primary-color);"></i> ${emp.salary} ج.م</span>
-              <span><i class="fas fa-clock" style="color:var(--primary-color);"></i> ${emp.dailyhours||8} ساعات</span>
+              <span><i class="fas fa-clock" style="color:var(--primary-color);"></i> ${emp.dailyhours||8} ساعات/يوم</span>
             </div>
           </div>
           
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:6px;margin-bottom:15px;">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:6px;margin-bottom:15px;">
             <div style="background:#fff;border:1px solid #e8ecf1;border-radius:8px;padding:6px;text-align:center;">
-              <div style="font-size:0.65rem;color:#999;">أيام العمل</div>
-              <div style="font-size:1.1rem;font-weight:bold;color:var(--primary-color);">${s.workDays||0}</div>
+              <div style="font-size:0.65rem;color:#999;">إجمالي الأيام</div>
+              <div style="font-size:1.1rem;font-weight:bold;color:var(--primary-color);">${(s.workDays||0).toFixed(2)}</div>
+            </div>
+            <div style="background:#fff;border:1px solid #e8ecf1;border-radius:8px;padding:6px;text-align:center;border-color:var(--warning-color);">
+              <div style="font-size:0.65rem;color:#999;">أيام إضافية</div>
+              <div style="font-size:1.1rem;font-weight:bold;color:var(--warning-color);">${(s.extraDays||0).toFixed(2)}</div>
             </div>
             <div style="background:#fff;border:1px solid #e8ecf1;border-radius:8px;padding:6px;text-align:center;">
               <div style="font-size:0.65rem;color:#999;">الإجازات</div>
               <div style="font-size:1.1rem;font-weight:bold;color:var(--success-color);">${s.vacationDays||0}</div>
             </div>
             <div style="background:#fff;border:1px solid #e8ecf1;border-radius:8px;padding:6px;text-align:center;">
-              <div style="font-size:0.65rem;color:#999;">الغياب</div>
+              <div style="font-size:0.65rem;color:#999;">أيام الغياب</div>
               <div style="font-size:1.1rem;font-weight:bold;color:var(--danger-color);">${s.unpaidDays||0}</div>
             </div>
             <div style="background:#fff;border:1px solid #e8ecf1;border-radius:8px;padding:6px;text-align:center;">
-              <div style="font-size:0.65rem;color:#999;">ساعات إضافية</div>
-              <div style="font-size:1.1rem;font-weight:bold;">${(s.overtimeHours||0).toFixed(1)}</div>
-            </div>
-            <div style="background:#fff;border:1px solid #e8ecf1;border-radius:8px;padding:6px;text-align:center;">
               <div style="font-size:0.65rem;color:#999;">الرصيد</div>
-              <div style="font-size:1.1rem;font-weight:bold;color:var(--primary-color);">${(s.balance||0).toFixed(0)}</div>
+              <div style="font-size:1.1rem;font-weight:bold;color:${(s.balance||0)<0?'var(--danger-color)':'var(--primary-color)'};">${(s.balance||0).toFixed(0)}</div>
             </div>
           </div>
           
           <div style="background:#f8f9fa;border-radius:8px;padding:10px 15px;margin-bottom:15px;border:1px solid #e8ecf1;font-size:0.85rem;">
             <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed #e8ecf1;">
-              <span style="color:#666;">المستحقات</span>
+              <span style="color:#666;">أيام العمل الفعلية</span>
+              <span style="color:var(--primary-color);">${(s.normalWorkDays||0).toFixed(1)} يوم</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed #e8ecf1;background:#fff3cd;">
+              <span style="color:#856404;font-weight:bold;">+ الأيام الإضافية (${(s.overtimeHours||0).toFixed(1)} ساعة)</span>
+              <span style="color:#856404;font-weight:bold;">+ ${(s.extraDays||0).toFixed(2)} يوم</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed #e8ecf1;">
+              <span style="color:#666;">أيام الإجازة</span>
+              <span style="color:var(--success-color);">${s.vacationDays||0} يوم</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed #e8ecf1;font-weight:bold;border-bottom-width:2px;">
+              <span style="color:#666;">إجمالي الأيام المدفوعة</span>
+              <span style="color:var(--primary-color);">${(s.workDays||0).toFixed(2)} يوم</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed #e8ecf1;">
+              <span style="color:#666;">أيام الغياب (غير مدفوعة)</span>
+              <span style="color:var(--danger-color);">${s.unpaidDays||0} يوم</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed #e8ecf1;">
+              <span style="color:#666;">قيمة اليوم</span>
+              <span style="color:var(--primary-color);">${(emp.salary/30||0).toFixed(2)} ج.م</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed #e8ecf1;">
+              <span style="color:#666;">إجمالي المستحقات</span>
               <span style="color:var(--success-color);">${(s.totalEarnings||0).toFixed(2)} ج.م</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed #e8ecf1;">
-              <span style="color:#666;">الساعات الإضافية</span>
-              <span style="color:var(--primary-color);">${(s.overtimeHours||0).toFixed(1)} ساعة (${(s.overtimeSalary||0).toFixed(2)} ج.م)</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed #e8ecf1;">
-              <span style="color:#666;">خصم الغياب</span>
-              <span style="color:var(--danger-color);">-${(s.absentDeduction||0).toFixed(2)} ج.م</span>
             </div>
             <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed #e8ecf1;">
               <span style="color:#666;">المسحوبات</span>
@@ -1652,9 +1667,10 @@
         const s = calculateStats(mr, mw, mp, emp);
         await db.monthlyArchives.upsert({
           employee_id: empId, month,
-          workdays: s.workDays, vacationdays: s.vacationDays, unpaiddays: s.unpaidDays,
-          vacationsalary: s.vacationSalary, absentdeduction: s.absentDeduction,
-          workdayssalary: s.workDaysSalary, overtimehours: s.overtimeHours, overtimessalary: s.overtimeSalary,
+          workdays: s.workDays, normalWorkDays: s.normalWorkDays, extraDays: s.extraDays,
+          vacationdays: s.vacationDays, unpaiddays: s.unpaidDays,
+          vacationsalary: 0, absentdeduction: 0,
+          workdayssalary: s.totalEarnings, overtimehours: s.overtimeHours,
           totalallowance: s.totalAllowance, totaltransport: s.totalTransport,
           totalearnings: s.totalEarnings, totalwithdrawals: s.totalWithdrawals,
           totalpenalties: s.totalPenalties, totaldeductions: s.totalDeductions, balance: s.balance
@@ -1685,13 +1701,13 @@
                 return `<div style="background:#fff;border:1px solid #e8ecf1;border-radius:10px;padding:10px 12px;margin-bottom:8px;">
                   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;padding-bottom:4px;border-bottom:1px dashed #e8ecf1;">
                     <span style="font-weight:bold;color:var(--primary-color);">${mn} ${y}</span>
-                    <span style="color:#888;font-size:0.8rem;">${a.workdays||0} يوم عمل</span>
+                    <span style="color:#888;font-size:0.8rem;">${(a.workdays||0).toFixed(1)} يوم</span>
                   </div>
                   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:4px;">
-                    <div style="text-align:center;padding:3px;background:#f8f9fa;border-radius:4px;"><div style="font-size:0.6rem;color:#999;">عمل</div><div style="font-size:0.9rem;font-weight:bold;color:var(--primary-color)">${a.workdays||0}</div></div>
+                    <div style="text-align:center;padding:3px;background:#f8f9fa;border-radius:4px;"><div style="font-size:0.6rem;color:#999;">أيام عمل</div><div style="font-size:0.9rem;font-weight:bold;color:var(--primary-color)">${(a.normalWorkDays||0).toFixed(1)}</div></div>
+                    <div style="text-align:center;padding:3px;background:#fff3cd;border-radius:4px;"><div style="font-size:0.6rem;color:#856404;">أيام إضافية</div><div style="font-size:0.9rem;font-weight:bold;color:#856404;">${(a.extraDays||0).toFixed(2)}</div></div>
                     <div style="text-align:center;padding:3px;background:#f8f9fa;border-radius:4px;"><div style="font-size:0.6rem;color:#999;">إجازة</div><div style="font-size:0.9rem;font-weight:bold;color:var(--success-color)">${a.vacationdays||0}</div></div>
                     <div style="text-align:center;padding:3px;background:#f8f9fa;border-radius:4px;"><div style="font-size:0.6rem;color:#999;">غياب</div><div style="font-size:0.9rem;font-weight:bold;color:var(--danger-color)">${a.unpaiddays||0}</div></div>
-                    <div style="text-align:center;padding:3px;background:#f8f9fa;border-radius:4px;"><div style="font-size:0.6rem;color:#999;">ساعات إضافية</div><div style="font-size:0.9rem;font-weight:bold;">${(a.overtimehours||0).toFixed(1)}</div></div>
                     <div style="text-align:center;padding:3px;background:#f8f9fa;border-radius:4px;"><div style="font-size:0.6rem;color:#999;">الرصيد</div><div style="font-size:0.9rem;font-weight:bold;color:${(a.balance||0)<0?'var(--danger-color)':'var(--primary-color)'}">${(a.balance||0).toFixed(0)}</div></div>
                   </div>
                 </div>`;
@@ -1732,9 +1748,9 @@
 </style></head><body>
         <h2>${emp.name}</h2>
         <div class="stats">
-          <div class="stat"><div class="lbl">أيام العمل</div><div class="val">${s.workDays||0}</div></div>
+          <div class="stat"><div class="lbl">إجمالي الأيام</div><div class="val">${(s.workDays||0).toFixed(2)}</div></div>
+          <div class="stat"><div class="lbl">أيام إضافية</div><div class="val">${(s.extraDays||0).toFixed(2)}</div></div>
           <div class="stat"><div class="lbl">الإجازات</div><div class="val">${s.vacationDays||0}</div></div>
-          <div class="stat"><div class="lbl">الغياب</div><div class="val">${s.unpaidDays||0}</div></div>
           <div class="stat"><div class="lbl">الرصيد</div><div class="val ${(s.balance||0)<0?'negative':'positive'}">${(s.balance||0).toFixed(2)}</div></div>
         </div>
         ${table.outerHTML}
